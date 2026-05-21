@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include <Foundation/Foundation.hpp>
+#import <Foundation/Foundation.h>
 #include <MaterialX/MXGenShaderHwShaderGenerator.h>
 #include <MaterialX/MXRenderHwSimpleWindow.h>
 #include <MaterialX/MXRenderMslRenderer.h>
@@ -11,7 +11,7 @@
 
 #include <iostream>
 
-#include <Metal/Metal.hpp>
+#import <Metal/Metal.h>
 
 MATERIALX_NAMESPACE_BEGIN
 
@@ -24,7 +24,7 @@ MslRendererPtr MslRenderer::create(unsigned int width, unsigned int height,
   return MslRendererPtr(new MslRenderer(width, height, baseType));
 }
 
-MTL::Device *MslRenderer::getMetalDevice() const { return _device; }
+id<MTLDevice> MslRenderer::getMetalDevice() const { return _device; }
 
 MslRenderer::MslRenderer(unsigned int width, unsigned int height,
                          Image::BaseType baseType)
@@ -45,7 +45,7 @@ void MslRenderer::initialize(RenderContextHandle) {
       throw ExceptionRenderError("Failed to initialize renderer window");
     }
 
-    _device = MTL::CreateSystemDefaultDevice();
+    _device = MTLCreateSystemDefaultDevice();
     _cmdQueue = _device->newCommandQueue();
     createFrameBuffer(true);
 
@@ -72,12 +72,12 @@ void MslRenderer::renderTextureSpace(const Vector2 &uvMin,
   if (captureRenderTextureSpace)
     triggerProgrammaticCapture();
 
-  MTL::RenderPassDescriptor *desc = MTL::RenderPassDescriptor::alloc()->init();
+  MTLRenderPassDescriptor *desc = MTLRenderPassDescriptor::alloc()->init();
   _framebuffer->bind(desc);
 
   _cmdBuffer = _cmdQueue->commandBuffer();
 
-  MTL::RenderCommandEncoder *rendercmdEncoder =
+  MTLRenderCommandEncoder *rendercmdEncoder =
       _cmdBuffer->renderCommandEncoder(desc);
   _program->bind(rendercmdEncoder);
   _program->prepareUsedResources(rendercmdEncoder, _camera, _geometryHandler,
@@ -89,7 +89,7 @@ void MslRenderer::renderTextureSpace(const Vector2 &uvMin,
   _program->bindPartition(part);
   MeshIndexBuffer &indexData = part->getIndices();
   rendercmdEncoder->drawIndexedPrimitives(
-      MTL::PrimitiveTypeTriangle, indexData.size(), MTL::IndexTypeUInt32,
+      MTLPrimitiveTypeTriangle, indexData.size(), MTLIndexTypeUInt32,
       _program->getIndexBuffer(part), 0);
 
   _framebuffer->unbind();
@@ -130,24 +130,24 @@ void MslRenderer::setSize(unsigned int width, unsigned int height) {
 }
 
 void MslRenderer::triggerProgrammaticCapture() {
-  MTL::CaptureManager *captureManager =
-      MTL::CaptureManager::sharedCaptureManager();
-  MTL::CaptureDescriptor *captureDescriptor =
-      MTL::CaptureDescriptor::alloc()->init();
+  MTLCaptureManager *captureManager =
+      MTLCaptureManager::sharedCaptureManager();
+  MTLCaptureDescriptor *captureDescriptor =
+      MTLCaptureDescriptor::alloc()->init();
   captureDescriptor->setCaptureObject(_device);
 
-  NS::Error *error = nil;
+  NSError *error = nil;
   if (!captureManager->startCapture(captureDescriptor, &error)) {
 #if WITH_APPLE_NSLOG
-    NS::Log(NS::String::string("Failed to start capture, error %@", error),
+    NS::Log(NSString::string("Failed to start capture, error %@", error),
             NS::UTF8StringEncoding);
 #endif /* WITH_APPLE_NSLOG */
   }
 }
 
 void MslRenderer::stopProgrammaticCapture() {
-  MTL::CaptureManager *captureManager =
-      MTL::CaptureManager::sharedCaptureManager();
+  MTLCaptureManager *captureManager =
+      MTLCaptureManager::sharedCaptureManager();
   captureManager->stopCapture();
 }
 
@@ -157,27 +157,27 @@ void MslRenderer::render() {
     triggerProgrammaticCapture();
 
   _cmdBuffer = _cmdQueue->commandBuffer();
-  MTL::RenderPassDescriptor *renderpassDesc =
-      MTL::RenderPassDescriptor::alloc()->init();
+  MTLRenderPassDescriptor *renderpassDesc =
+      MTLRenderPassDescriptor::alloc()->init();
 
   _framebuffer->bind(renderpassDesc);
   renderpassDesc->colorAttachments()->object(0)->setClearColor(
-      MTL::ClearColor::Make(_screenColor[0], _screenColor[1], _screenColor[2],
+      MTLClearColor::Make(_screenColor[0], _screenColor[1], _screenColor[2],
                             1.0f));
 
-  MTL::RenderCommandEncoder *renderCmdEncoder =
+  MTLRenderCommandEncoder *renderCmdEncoder =
       _cmdBuffer->renderCommandEncoder(renderpassDesc);
 
-  MTL::DepthStencilDescriptor *depthStencilDesc =
-      MTL::DepthStencilDescriptor::alloc()->init();
+  MTLDepthStencilDescriptor *depthStencilDesc =
+      MTLDepthStencilDescriptor::alloc()->init();
   depthStencilDesc->setDepthWriteEnabled(!(_program->isTransparent()));
-  depthStencilDesc->setDepthCompareFunction(MTL::CompareFunctionLess);
+  depthStencilDesc->setDepthCompareFunction(MTLCompareFunctionLess);
 
-  MTL::DepthStencilState *depthStencilState =
+  MTLDepthStencilState *depthStencilState =
       _device->newDepthStencilState(depthStencilDesc);
   renderCmdEncoder->setDepthStencilState(depthStencilState);
 
-  renderCmdEncoder->setCullMode(MTL::CullModeBack);
+  renderCmdEncoder->setCullMode(MTLCullModeBack);
 
   try {
     // Bind program and input parameters
@@ -198,16 +198,16 @@ void MslRenderer::render() {
           MeshIndexBuffer &indexData = part->getIndices();
 
           if (_program->isTransparent()) {
-            renderCmdEncoder->setCullMode(MTL::CullModeFront);
+            renderCmdEncoder->setCullMode(MTLCullModeFront);
             renderCmdEncoder->drawIndexedPrimitives(
-                MTL::PrimitiveTypeTriangle, (int)indexData.size(),
-                MTL::IndexTypeUInt32, _program->getIndexBuffer(part), 0);
-            renderCmdEncoder->setCullMode(MTL::CullModeBack);
+                MTLPrimitiveTypeTriangle, (int)indexData.size(),
+                MTLIndexTypeUInt32, _program->getIndexBuffer(part), 0);
+            renderCmdEncoder->setCullMode(MTLCullModeBack);
           }
 
           renderCmdEncoder->drawIndexedPrimitives(
-              MTL::PrimitiveTypeTriangle, (int)indexData.size(),
-              MTL::IndexTypeUInt32, _program->getIndexBuffer(part), 0);
+              MTLPrimitiveTypeTriangle, (int)indexData.size(),
+              MTLIndexTypeUInt32, _program->getIndexBuffer(part), 0);
         }
       }
     }

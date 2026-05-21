@@ -16,21 +16,21 @@ MATERIALX_NAMESPACE_BEGIN
 //
 
 MetalFramebufferPtr
-MetalFramebuffer::create(MTL::Device *device, unsigned int width,
+MetalFramebuffer::create(id<MTLDevice> device, unsigned int width,
                          unsigned int height, unsigned channelCount,
-                         Image::BaseType baseType, MTL::Texture *colorTexture,
-                         bool encodeSrgb, MTL::PixelFormat pixelFormat) {
+                         Image::BaseType baseType, MTLTexture *colorTexture,
+                         bool encodeSrgb, MTLPixelFormat pixelFormat) {
   return MetalFramebufferPtr(
       new MetalFramebuffer(device, width, height, channelCount, baseType,
                            colorTexture, encodeSrgb, pixelFormat));
 }
 
-MetalFramebuffer::MetalFramebuffer(MTL::Device *device, unsigned int width,
+MetalFramebuffer::MetalFramebuffer(id<MTLDevice> device, unsigned int width,
                                    unsigned int height,
                                    unsigned int channelCount,
                                    Image::BaseType baseType,
-                                   MTL::Texture *colorTexture, bool encodeSrgb,
-                                   MTL::PixelFormat pixelFormat)
+                                   MTLTexture *colorTexture, bool encodeSrgb,
+                                   MTLPixelFormat pixelFormat)
     : _width(0), _height(0), _channelCount(channelCount), _baseType(baseType),
       _encodeSrgb(encodeSrgb), _device(device), _colorTexture(colorTexture),
       _depthTexture(0) {
@@ -46,24 +46,24 @@ MetalFramebuffer::~MetalFramebuffer() {
 }
 
 void MetalFramebuffer::resize(unsigned int width, unsigned int height,
-                              bool forceRecreate, MTL::PixelFormat pixelFormat,
-                              MTL::Texture *extColorTexture) {
+                              bool forceRecreate, MTLPixelFormat pixelFormat,
+                              MTLTexture *extColorTexture) {
   if (width * height <= 0) {
     return;
   }
   if (width != _width || _height != height || forceRecreate) {
     // Convert texture format to Metal
-    MTL::DataType dataType;
-    if (pixelFormat == MTL::PixelFormatInvalid)
+    MTLDataType dataType;
+    if (pixelFormat == MTLPixelFormatInvalid)
       MetalTextureHandler::mapTextureFormatToMetal(
           _baseType, _channelCount, _encodeSrgb, dataType, pixelFormat);
 
-    MTL::TextureDescriptor *texDescriptor =
-        MTL::TextureDescriptor::texture2DDescriptor(pixelFormat, width, height,
+    MTLTextureDescriptor *texDescriptor =
+        MTLTextureDescriptor::texture2DDescriptor(pixelFormat, width, height,
                                                     NO);
-    texDescriptor->setStorageMode(MTL::StorageModePrivate);
-    texDescriptor->setUsage(MTL::TextureUsageRenderTarget |
-                            MTL::TextureUsageShaderRead);
+    texDescriptor->setStorageMode(MTLStorageModePrivate);
+    texDescriptor->setUsage(MTLTextureUsageRenderTarget |
+                            MTLTextureUsageShaderRead);
 
     if (extColorTexture == nil) {
       _colorTexture = _device->newTexture(texDescriptor);
@@ -73,8 +73,8 @@ void MetalFramebuffer::resize(unsigned int width, unsigned int height,
       _colorTextureOwned = false;
     }
 
-    texDescriptor->setPixelFormat(MTL::PixelFormatDepth32Float);
-    texDescriptor->setUsage(MTL::TextureUsageRenderTarget);
+    texDescriptor->setPixelFormat(MTLPixelFormatDepth32Float);
+    texDescriptor->setUsage(MTLTextureUsageRenderTarget);
     _depthTexture = _device->newTexture(texDescriptor);
 
     _width = width;
@@ -82,17 +82,17 @@ void MetalFramebuffer::resize(unsigned int width, unsigned int height,
   }
 }
 
-void MetalFramebuffer::bind(MTL::RenderPassDescriptor *renderpassDesc) {
+void MetalFramebuffer::bind(MTLRenderPassDescriptor *renderpassDesc) {
   renderpassDesc->colorAttachments()->object(0)->setTexture(getColorTexture());
   renderpassDesc->colorAttachments()->object(0)->setLoadAction(
-      MTL::LoadActionClear);
+      MTLLoadActionClear);
   renderpassDesc->colorAttachments()->object(0)->setStoreAction(
-      MTL::StoreActionStore);
+      MTLStoreActionStore);
 
   renderpassDesc->depthAttachment()->setTexture(getDepthTexture());
   renderpassDesc->depthAttachment()->setClearDepth(1.0);
-  renderpassDesc->depthAttachment()->setLoadAction(MTL::LoadActionClear);
-  renderpassDesc->depthAttachment()->setStoreAction(MTL::StoreActionStore);
+  renderpassDesc->depthAttachment()->setLoadAction(MTLLoadActionClear);
+  renderpassDesc->depthAttachment()->setStoreAction(MTLStoreActionStore);
   renderpassDesc->setStencilAttachment(nil);
 
   renderpassDesc->setRenderTargetWidth(_width);
@@ -101,7 +101,7 @@ void MetalFramebuffer::bind(MTL::RenderPassDescriptor *renderpassDesc) {
 
 void MetalFramebuffer::unbind() {}
 
-ImagePtr MetalFramebuffer::getColorImage(MTL::CommandQueue *cmdQueue,
+ImagePtr MetalFramebuffer::getColorImage(MTLCommandQueue *cmdQueue,
                                          ImagePtr image) {
   if (!image) {
     image = Image::create(_width, _height, _channelCount, _baseType);
@@ -116,16 +116,16 @@ ImagePtr MetalFramebuffer::getColorImage(MTL::CommandQueue *cmdQueue,
                        MetalTextureHandler::getTextureBaseTypeSize(_baseType);
   size_t bytesPerImage = _height * bytesPerRow;
 
-  MTL::Buffer *buffer =
-      _device->newBuffer(bytesPerImage, MTL::ResourceStorageModeShared);
+  MTLBuffer *buffer =
+      _device->newBuffer(bytesPerImage, MTLResourceStorageModeShared);
 
-  MTL::CommandBuffer *cmdBuffer = cmdQueue->commandBuffer();
+  MTLCommandBuffer *cmdBuffer = cmdQueue->commandBuffer();
 
-  MTL::BlitCommandEncoder *blitCmdEncoder = cmdBuffer->blitCommandEncoder();
+  MTLBlitCommandEncoder *blitCmdEncoder = cmdBuffer->blitCommandEncoder();
   blitCmdEncoder->copyFromTexture(
-      _colorTexture, 0, 0, MTL::Origin::Make(0, 0, 0),
-      MTL::Size::Make(_width, _height, 1), buffer, 0, bytesPerRow,
-      bytesPerImage, MTL::BlitOptionNone);
+      _colorTexture, 0, 0, MTLOrigin::Make(0, 0, 0),
+      MTLSize::Make(_width, _height, 1), buffer, 0, bytesPerRow,
+      bytesPerImage, MTLBlitOptionNone);
 
   blitCmdEncoder->endEncoding();
 
@@ -135,7 +135,7 @@ ImagePtr MetalFramebuffer::getColorImage(MTL::CommandQueue *cmdQueue,
   std::vector<unsigned char> imageData(bytesPerImage);
   memcpy(imageData.data(), buffer->contents(), bytesPerImage);
 
-  if (_colorTexture->pixelFormat() == MTL::PixelFormatBGRA8Unorm) {
+  if (_colorTexture->pixelFormat() == MTLPixelFormatBGRA8Unorm) {
     for (unsigned int j = 0; j < _height; ++j) {
       unsigned int rawStart = j * (_width * _channelCount);
       for (unsigned int i = 0; i < _width; ++i) {
