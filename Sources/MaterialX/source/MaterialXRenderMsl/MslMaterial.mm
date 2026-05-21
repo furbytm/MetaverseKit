@@ -234,8 +234,8 @@ void MslMaterial::drawPartition(MeshPartitionPtr part) const {
   MeshIndexBuffer &indexData = part->getIndices();
 
   MTL(renderCmdEncoder)
-      ->drawIndexedPrimitives(MTL::PrimitiveTypeTriangle, indexData.size(),
-                              MTL::IndexTypeUInt32,
+      ->drawIndexedPrimitives(MTLPrimitiveTypeTriangle, indexData.size(),
+                              MTLIndexTypeUInt32,
                               _glProgram->getIndexBuffer(part), 0);
 }
 

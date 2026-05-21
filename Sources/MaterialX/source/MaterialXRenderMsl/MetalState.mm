@@ -4,8 +4,8 @@
 //
 
 #include <MaterialX/MXRenderMslMetalState.h>
-#include <Foundation/Foundation.hpp>
-#include <Metal/Metal.hpp>
+#import <Foundation/Foundation.h>
+#import <Metal/Metal.h>
 
 #include <MaterialX/MXRenderMslMetalFramebuffer.h>
 
@@ -13,48 +13,48 @@ std::unique_ptr<MetalState> MetalState::singleton = nullptr;
 
 MetalState::MetalState() {}
 
-void MetalState::initialize(MTL::Device *mtlDevice,
-                            MTL::CommandQueue *mtlCmdQueue) {
+void MetalState::initialize(id<MTLDevice> mtlDevice,
+                            MTLCommandQueue *mtlCmdQueue) {
   device = mtlDevice;
   cmdQueue = mtlCmdQueue;
 
 #if defined(MAC_OS_VERSION_11_0) || defined(IPHONE_OS_VERSION_14_0)
-  supportsTiledPipeline = device->supportsFamily(MTL::GPUFamilyApple4);
+  supportsTiledPipeline = device->supportsFamily(MTLGPUFamilyApple4);
 #else
   supportsTiledPipeline = false;
 #endif
 
-  MTL::DepthStencilDescriptor *depthStencilDesc =
-      MTL::DepthStencilDescriptor::alloc()->init();
+  MTLDepthStencilDescriptor *depthStencilDesc =
+      MTLDepthStencilDescriptor::alloc()->init();
   depthStencilDesc->setDepthWriteEnabled(true);
-  depthStencilDesc->setDepthCompareFunction(MTL::CompareFunctionLess);
+  depthStencilDesc->setDepthCompareFunction(MTLCompareFunctionLess);
   opaqueDepthStencilState = device->newDepthStencilState(depthStencilDesc);
 
   depthStencilDesc->setDepthWriteEnabled(false);
-  depthStencilDesc->setDepthCompareFunction(MTL::CompareFunctionLess);
+  depthStencilDesc->setDepthCompareFunction(MTLCompareFunctionLess);
   transparentDepthStencilState = device->newDepthStencilState(depthStencilDesc);
 
   depthStencilDesc->setDepthWriteEnabled(true);
-  depthStencilDesc->setDepthCompareFunction(MTL::CompareFunctionAlways);
+  depthStencilDesc->setDepthCompareFunction(MTLCompareFunctionAlways);
   envMapDepthStencilState = device->newDepthStencilState(depthStencilDesc);
 
   initLinearToSRGBKernel();
 }
 
 void MetalState::initLinearToSRGBKernel() {
-  NS::Error *error = nil;
-  MTL::CompileOptions *options = MTL::CompileOptions::alloc()->init();
+  NSError *error = nil;
+  MTLCompileOptions *options = MTLCompileOptions::alloc()->init();
 #if defined(MAC_OS_VERSION_11_0) || defined(IPHONE_OS_VERSION_14_0)
-  options->setLanguageVersion(MTL::LanguageVersion2_3);
+  options->setLanguageVersion(MTLLanguageVersion2_3);
 #else
-  options->setLanguageVersion(MTL::LanguageVersion2_0);
+  options->setLanguageVersion(MTLLanguageVersion2_0);
 #endif // defined(MAC_OS_VERSION_11_0) || defined(IPHONE_OS_VERSION_14_0)
   options->setFastMathEnabled(true);
 
 #if defined(MAC_OS_VERSION_11_0) || defined(IPHONE_OS_VERSION_14_0)
   bool useTiledPipeline = supportsTiledPipeline;
   if (useTiledPipeline) {
-    NS::String *linearToSRGB_kernel = NS::String::string(
+    NSString *linearToSRGB_kernel = NSString::string(
         "#include <metal_stdlib>\n"
         "#include <simd/simd.h>\n"
         "\n"
@@ -93,16 +93,16 @@ void MetalState::initLinearToSRGBKernel() {
         "    imageBlock.write(srgbValue, tid);\n"
         "};\n",
         NS::UTF8StringEncoding);
-    MTL::Library *library =
+    MTLLibrary *library =
         device->newLibrary(linearToSRGB_kernel, options, &error);
-    MTL::Function *function = library->newFunction(
-        NS::String::string("LinearToSRGB_kernel", NS::UTF8StringEncoding));
+    MTLFunction *function = library->newFunction(
+        NSString::string("LinearToSRGB_kernel", NS::UTF8StringEncoding));
 
-    MTL::TileRenderPipelineDescriptor *renderPipelineDescriptor =
-        MTL::TileRenderPipelineDescriptor::alloc()->init();
+    MTLTileRenderPipelineDescriptor *renderPipelineDescriptor =
+        MTLTileRenderPipelineDescriptor::alloc()->init();
     renderPipelineDescriptor->setRasterSampleCount(1);
     renderPipelineDescriptor->colorAttachments()->object(0)->setPixelFormat(
-        MTL::PixelFormatBGRA8Unorm);
+        MTLPixelFormatBGRA8Unorm);
     renderPipelineDescriptor->setTileFunction(function);
     linearToSRGB_pso = device->newRenderPipelineState(renderPipelineDescriptor,
                                                       0, nil, &error);
@@ -111,7 +111,7 @@ void MetalState::initLinearToSRGBKernel() {
   useTiledPipeline = false;
 #endif
   if (!useTiledPipeline) {
-    NS::String *linearToSRGB_kernel = NS::String::string(
+    NSString *linearToSRGB_kernel = NSString::string(
         "#include <metal_stdlib>                                       \n"
         "#include <simd/simd.h>                                        \n"
         "                                                              \n"
@@ -160,46 +160,46 @@ void MetalState::initLinearToSRGBKernel() {
         "}                                                             \n",
         NS::UTF8StringEncoding);
 
-    MTL::Library *library =
+    MTLLibrary *library =
         device->newLibrary(linearToSRGB_kernel, options, &error);
 
-    MTL::Function *vertexfunction = library->newFunction(
-        NS::String::string("VertexMain", NS::UTF8StringEncoding));
-    MTL::Function *Fragmentfunction = library->newFunction(
-        NS::String::string("FragmentMain", NS::UTF8StringEncoding));
+    MTLFunction *vertexfunction = library->newFunction(
+        NSString::string("VertexMain", NS::UTF8StringEncoding));
+    MTLFunction *Fragmentfunction = library->newFunction(
+        NSString::string("FragmentMain", NS::UTF8StringEncoding));
 
-    MTL::RenderPipelineDescriptor *renderPipelineDesc =
-        MTL::RenderPipelineDescriptor::alloc()->init();
+    MTLRenderPipelineDescriptor *renderPipelineDesc =
+        MTLRenderPipelineDescriptor::alloc()->init();
     renderPipelineDesc->setVertexFunction(vertexfunction);
     renderPipelineDesc->setFragmentFunction(Fragmentfunction);
     renderPipelineDesc->colorAttachments()->object(0)->setPixelFormat(
-        MTL::PixelFormatBGRA8Unorm);
+        MTLPixelFormatBGRA8Unorm);
     renderPipelineDesc->setDepthAttachmentPixelFormat(
-        MTL::PixelFormatDepth32Float);
+        MTLPixelFormatDepth32Float);
     linearToSRGB_pso =
         device->newRenderPipelineState(renderPipelineDesc, &error);
   }
 }
 
 void MetalState::triggerProgrammaticCapture() {
-  MTL::CaptureManager *captureManager =
-      MTL::CaptureManager::sharedCaptureManager();
-  MTL::CaptureDescriptor *captureDescriptor =
-      MTL::CaptureDescriptor::alloc()->init();
+  MTLCaptureManager *captureManager =
+      MTLCaptureManager::sharedCaptureManager();
+  MTLCaptureDescriptor *captureDescriptor =
+      MTLCaptureDescriptor::alloc()->init();
 
   captureDescriptor->setCaptureObject(device);
 
-  NS::Error *error = nil;
+  NSError *error = nil;
   if (!captureManager->startCapture(captureDescriptor, &error)) {
 #if WITH_APPLE_NSLOG
-    NS::Log(NS::String::string("Failed to start capture, error %@", error));
+    NS::Log(NSString::string("Failed to start capture, error %@", error));
 #endif /* WITH_APPLE_NSLOG */
   }
 }
 
 void MetalState::stopProgrammaticCapture() {
-  MTL::CaptureManager *captureManager =
-      MTL::CaptureManager::sharedCaptureManager();
+  MTLCaptureManager *captureManager =
+      MTLCaptureManager::sharedCaptureManager();
   captureManager->stopCapture();
 }
 
@@ -208,7 +208,7 @@ void MetalState::beginCommandBuffer() {
   inFlightCommandBuffers++;
 }
 
-void MetalState::beginEncoder(MTL::RenderPassDescriptor *renderpassDesc) {
+void MetalState::beginEncoder(MTLRenderPassDescriptor *renderpassDesc) {
   renderCmdEncoder = cmdBuffer->renderCommandEncoder(renderpassDesc);
 }
 
@@ -216,7 +216,7 @@ void MetalState::endEncoder() { renderCmdEncoder->endEncoding(); }
 
 void MetalState::endCommandBuffer() {
   endEncoder();
-  cmdBuffer->addCompletedHandler([&](MTL::CommandBuffer *buffer) -> void {
+  cmdBuffer->addCompletedHandler([&](MTLCommandBuffer *buffer) -> void {
     inFlightCommandBuffers--;
     inFlightCV.notify_one();
   });
