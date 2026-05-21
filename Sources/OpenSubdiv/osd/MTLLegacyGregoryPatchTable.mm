@@ -23,7 +23,7 @@
 //
 
 #include "OpenSubdiv/OSDSurfaceMTLLegacyGregoryPatchTable.h"
-#include <Metal/Metal.h>
+#import <Metal/Metal.h>
 
 namespace OpenSubdiv {
 namespace OPENSUBDIV_VERSION {
@@ -38,7 +38,7 @@ static id<MTLBuffer> createBuffer(const void *data, const size_t length,
     auto stageBuffer = [context->device
         newBufferWithBytes:data
                     length:length
-                   options:MTLResourceOptionCPUCacheModeDefault];
+                   options:MTLResourceCPUCacheModeDefaultCache];
 
     auto finalBuffer =
         [context->device newBufferWithLength:length

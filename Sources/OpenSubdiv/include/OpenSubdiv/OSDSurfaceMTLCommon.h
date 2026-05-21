@@ -39,7 +39,7 @@ namespace Osd {
 
 class MTLContext {
 public:
-  id<MTLDevice> device = nullptr;
+  id<MTLDevice>  device = nullptr;
   id<MTLCommandQueue> commandQueue = nullptr;
 };
 

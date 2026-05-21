@@ -49,7 +49,7 @@ import XCTest
 
 class MetaverseKitTests: XCTestCase
 {
-  func testMetaverse() throws
+  func testMetaverse()
   {
     print("it works!")
   }

@@ -13,11 +13,10 @@
 /* #undef MATERIALX_BUILD_SHARED_LIBS */
 
 // Establish namespace:
-namespace MaterialX_v1_38_8
-{
-}
+namespace MaterialX_v1_38_8 {}
 
-// Establish alias to allow downstream clients to still use the MaterialX namespace:
+// Establish alias to allow downstream clients to still use the MaterialX
+// namespace:
 namespace MaterialX = MaterialX_v1_38_8;
 
 // All code in this project must use these macros for opening and closing the

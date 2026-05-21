@@ -68,7 +68,7 @@ public:
 
   void setFontScale(float val) { _fontScale = val; }
 
-  ~Graph(){};
+  ~Graph() {};
 
 private:
   mx::ElementPredicate getElementPredicate() const;

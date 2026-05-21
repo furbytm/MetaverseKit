@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include <MaterialX/MXRenderMslMetalState.h>
 #import <Foundation/Foundation.h>
+#include <MaterialX/MXRenderMslMetalState.h>
 #import <Metal/Metal.h>
 
 #include <MaterialX/MXRenderMslMetalFramebuffer.h>
@@ -14,214 +14,234 @@ std::unique_ptr<MetalState> MetalState::singleton = nullptr;
 MetalState::MetalState() {}
 
 void MetalState::initialize(id<MTLDevice> mtlDevice,
-                            MTLCommandQueue *mtlCmdQueue) {
+                            id<MTLCommandQueue> mtlCmdQueue) {
   device = mtlDevice;
   cmdQueue = mtlCmdQueue;
 
 #if defined(MAC_OS_VERSION_11_0) || defined(IPHONE_OS_VERSION_14_0)
-  supportsTiledPipeline = device->supportsFamily(MTLGPUFamilyApple4);
+  supportsTiledPipeline = [device supportsFamily:(MTLGPUFamilyApple4)];
 #else
   supportsTiledPipeline = false;
 #endif
 
   MTLDepthStencilDescriptor *depthStencilDesc =
-      MTLDepthStencilDescriptor::alloc()->init();
-  depthStencilDesc->setDepthWriteEnabled(true);
-  depthStencilDesc->setDepthCompareFunction(MTLCompareFunctionLess);
-  opaqueDepthStencilState = device->newDepthStencilState(depthStencilDesc);
+      [[MTLDepthStencilDescriptor alloc] init];
+  [depthStencilDesc setDepthWriteEnabled:(true)];
+  [depthStencilDesc setDepthCompareFunction:(MTLCompareFunctionLess)];
+  opaqueDepthStencilState =
+      [device newDepthStencilStateWithDescriptor:(depthStencilDesc)];
 
-  depthStencilDesc->setDepthWriteEnabled(false);
-  depthStencilDesc->setDepthCompareFunction(MTLCompareFunctionLess);
-  transparentDepthStencilState = device->newDepthStencilState(depthStencilDesc);
+  [depthStencilDesc setDepthWriteEnabled:(false)];
+  [depthStencilDesc setDepthCompareFunction:(MTLCompareFunctionLess)];
+  transparentDepthStencilState =
+      [device newDepthStencilStateWithDescriptor:(depthStencilDesc)];
 
-  depthStencilDesc->setDepthWriteEnabled(true);
-  depthStencilDesc->setDepthCompareFunction(MTLCompareFunctionAlways);
-  envMapDepthStencilState = device->newDepthStencilState(depthStencilDesc);
+  [depthStencilDesc setDepthWriteEnabled:(true)];
+  [depthStencilDesc setDepthCompareFunction:(MTLCompareFunctionAlways)];
+  envMapDepthStencilState =
+      [device newDepthStencilStateWithDescriptor:(depthStencilDesc)];
 
   initLinearToSRGBKernel();
 }
 
 void MetalState::initLinearToSRGBKernel() {
   NSError *error = nil;
-  MTLCompileOptions *options = MTLCompileOptions::alloc()->init();
+  MTLCompileOptions *options = [[MTLCompileOptions alloc] init];
 #if defined(MAC_OS_VERSION_11_0) || defined(IPHONE_OS_VERSION_14_0)
-  options->setLanguageVersion(MTLLanguageVersion2_3);
+  [options setLanguageVersion:(MTLLanguageVersion2_3)];
 #else
-  options->setLanguageVersion(MTLLanguageVersion2_0);
+  [options setLanguageVersion:(MTLLanguageVersion2_0)];
 #endif // defined(MAC_OS_VERSION_11_0) || defined(IPHONE_OS_VERSION_14_0)
-  options->setFastMathEnabled(true);
+  [options setFastMathEnabled:(true)];
 
 #if defined(MAC_OS_VERSION_11_0) || defined(IPHONE_OS_VERSION_14_0)
   bool useTiledPipeline = supportsTiledPipeline;
   if (useTiledPipeline) {
-    NSString *linearToSRGB_kernel = NSString::string(
-        "#include <metal_stdlib>\n"
-        "#include <simd/simd.h>\n"
-        "\n"
-        "\n"
-        "using namespace metal;\n"
-        "\n"
-        "\n"
-        "struct RenderTarget {\n"
-        "    half4 colorTarget [[color(0)]];\n"
-        "};\n"
-        "\n"
-        "\n"
-        "\n"
-        "\n"
-        "half4 linearToSRGB(half4 color_linear)\n"
-        "{\n"
-        "  \n"
-        "    half4 color_srgb;\n"
-        "  \n"
-        "    for(int i = 0; i < 3; ++i)\n"
-        "        color_srgb[i] = (color_linear[i] < 0.0031308) ?\n"
-        "            (12.92 * color_linear[i])                 :\n"
-        "            (1.055 * pow(color_linear[i], 1.0h / 2.2h) - 0.055);\n"
-        "    color_srgb[3] = color_linear[3];\n"
-        "    return color_srgb;\n"
-        "}\n"
-        "\n"
-        "kernel void LinearToSRGB_kernel(\n"
-        "    imageblock<RenderTarget,imageblock_layout_implicit> imageBlock,\n"
-        "    ushort2 tid [[ thread_position_in_threadgroup ]])\n"
-        "{\n"
-        " \n"
-        "    RenderTarget linearValue = imageBlock.read(tid);\n"
-        "    RenderTarget srgbValue;\n"
-        "    srgbValue.colorTarget = linearToSRGB(linearValue.colorTarget);\n"
-        "    imageBlock.write(srgbValue, tid);\n"
-        "};\n",
-        NS::UTF8StringEncoding);
-    MTLLibrary *library =
-        device->newLibrary(linearToSRGB_kernel, options, &error);
-    MTLFunction *function = library->newFunction(
-        NSString::string("LinearToSRGB_kernel", NS::UTF8StringEncoding));
+    NSString *linearToSRGB_kernel = [NSString
+        stringWithCString:
+            ("#include <metal_stdlib>\n"
+             "#include <simd/simd.h>\n"
+             "\n"
+             "\n"
+             "using namespace metal;\n"
+             "\n"
+             "\n"
+             "struct RenderTarget {\n"
+             "    half4 colorTarget [[color(0)]];\n"
+             "};\n"
+             "\n"
+             "\n"
+             "\n"
+             "\n"
+             "half4 linearToSRGB(half4 color_linear)\n"
+             "{\n"
+             "  \n"
+             "    half4 color_srgb;\n"
+             "  \n"
+             "    for(int i = 0; i < 3; ++i)\n"
+             "        color_srgb[i] = (color_linear[i] < 0.0031308) ?\n"
+             "            (12.92 * color_linear[i])                 :\n"
+             "            (1.055 * pow(color_linear[i], 1.0h / 2.2h) - "
+             "0.055);\n"
+             "    color_srgb[3] = color_linear[3];\n"
+             "    return color_srgb;\n"
+             "}\n"
+             "\n"
+             "kernel void LinearToSRGB_kernel(\n"
+             "    imageblock<RenderTarget,imageblock_layout_implicit> "
+             "imageBlock,\n"
+             "    ushort2 tid [[ thread_position_in_threadgroup ]])\n"
+             "{\n"
+             " \n"
+             "    RenderTarget linearValue = imageBlock.read(tid);\n"
+             "    RenderTarget srgbValue;\n"
+             "    srgbValue.colorTarget = "
+             "linearToSRGB(linearValue.colorTarget);\n"
+             "    imageBlock.write(srgbValue, tid);\n"
+             "};\n")
+                 encoding:NSUTF8StringEncoding];
+    id<MTLLibrary> library = [device newLibraryWithSource:linearToSRGB_kernel
+                                                  options:options
+                                                    error:&error];
+    id<MTLFunction> function = [library
+        newFunctionWithName:([NSString
+                                stringWithCString:("LinearToSRGB_kernel")
+                                         encoding:NSUTF8StringEncoding])];
 
     MTLTileRenderPipelineDescriptor *renderPipelineDescriptor =
-        MTLTileRenderPipelineDescriptor::alloc()->init();
-    renderPipelineDescriptor->setRasterSampleCount(1);
-    renderPipelineDescriptor->colorAttachments()->object(0)->setPixelFormat(
-        MTLPixelFormatBGRA8Unorm);
-    renderPipelineDescriptor->setTileFunction(function);
-    linearToSRGB_pso = device->newRenderPipelineState(renderPipelineDescriptor,
-                                                      0, nil, &error);
+        [[MTLTileRenderPipelineDescriptor alloc] init];
+    [renderPipelineDescriptor setRasterSampleCount:(1)];
+    [[[renderPipelineDescriptor colorAttachments] objectAtIndexedSubscript:0]
+        setPixelFormat:MTLPixelFormatBGRA8Unorm];
+    [renderPipelineDescriptor setTileFunction:(function)];
+
+    linearToSRGB_pso = [device
+        newRenderPipelineStateWithTileDescriptor:(renderPipelineDescriptor)
+                                         options:0
+                                      reflection:nil
+                                           error:&error];
   }
 #else
   useTiledPipeline = false;
 #endif
   if (!useTiledPipeline) {
-    NSString *linearToSRGB_kernel = NSString::string(
-        "#include <metal_stdlib>                                       \n"
-        "#include <simd/simd.h>                                        \n"
-        "                                                              \n"
-        "using namespace metal;                                        \n"
-        "                                                              \n"
-        "struct VSOutput                                               \n"
-        "{                                                             \n"
-        "    float4 position [[position]];                             \n"
-        "};                                                            \n"
-        "                                                              \n"
-        "vertex VSOutput VertexMain(uint vertexId [[ vertex_id ]])     \n"
-        "{                                                             \n"
-        "    VSOutput vsOut;                                           \n"
-        "                                                              \n"
-        "    switch(vertexId)                                          \n"
-        "    {                                                         \n"
-        "    case 0: vsOut.position = float4(-1, -1, 0.5, 1); break;   \n"
-        "    case 1: vsOut.position = float4(-1,  3, 0.5, 1); break;   \n"
-        "    case 2: vsOut.position = float4( 3, -1, 0.5, 1); break;   \n"
-        "    };                                                        \n"
-        "                                                              \n"
-        "    return vsOut;                                             \n"
-        "}                                                             \n"
-        "                                                              \n"
-        "half4 linearToSRGB(half4 color_linear)                        \n"
-        "{                                                             \n"
-        "    half4 color_srgb;                                         \n"
-        "    for(int i = 0; i < 3; ++i)                                \n"
-        "        color_srgb[i] = (color_linear[i] < 0.0031308) ?       \n"
-        "          (12.92 * color_linear[i])                   :       \n"
-        "          (1.055 * pow(color_linear[i], 1.0h / 2.2h) - 0.055);\n"
-        "    color_srgb[3] = color_linear[3];                          \n"
-        "    return color_srgb;                                        \n"
-        "}                                                             \n"
-        "                                                              \n"
-        "fragment half4 FragmentMain(                                  \n"
-        "    texture2d<half>  inputTex  [[ texture(0) ]],              \n"
-        "    float4           fragCoord [[ position ]]                 \n"
-        ")                                                             \n"
-        "{                                                             \n"
-        "    constexpr sampler ss(                                     \n"
-        "        coord::pixel,                                         \n"
-        "        address::clamp_to_border,                             \n"
-        "        filter::linear);                                      \n"
-        "    return linearToSRGB(inputTex.sample(ss, fragCoord.xy));   \n"
-        "}                                                             \n",
-        NS::UTF8StringEncoding);
+    NSString *linearToSRGB_kernel = [NSString
+        stringWithCString:
+            ("#include <metal_stdlib>                                       \n"
+             "#include <simd/simd.h>                                        \n"
+             "                                                              \n"
+             "using namespace metal;                                        \n"
+             "                                                              \n"
+             "struct VSOutput                                               \n"
+             "{                                                             \n"
+             "    float4 position [[position]];                             \n"
+             "};                                                            \n"
+             "                                                              \n"
+             "vertex VSOutput VertexMain(uint vertexId [[ vertex_id ]])     \n"
+             "{                                                             \n"
+             "    VSOutput vsOut;                                           \n"
+             "                                                              \n"
+             "    switch(vertexId)                                          \n"
+             "    {                                                         \n"
+             "    case 0: vsOut.position = float4(-1, -1, 0.5, 1); break;   \n"
+             "    case 1: vsOut.position = float4(-1,  3, 0.5, 1); break;   \n"
+             "    case 2: vsOut.position = float4( 3, -1, 0.5, 1); break;   \n"
+             "    };                                                        \n"
+             "                                                              \n"
+             "    return vsOut;                                             \n"
+             "}                                                             \n"
+             "                                                              \n"
+             "half4 linearToSRGB(half4 color_linear)                        \n"
+             "{                                                             \n"
+             "    half4 color_srgb;                                         \n"
+             "    for(int i = 0; i < 3; ++i)                                \n"
+             "        color_srgb[i] = (color_linear[i] < 0.0031308) ?       \n"
+             "          (12.92 * color_linear[i])                   :       \n"
+             "          (1.055 * pow(color_linear[i], 1.0h / 2.2h) - 0.055);\n"
+             "    color_srgb[3] = color_linear[3];                          \n"
+             "    return color_srgb;                                        \n"
+             "}                                                             \n"
+             "                                                              \n"
+             "fragment half4 FragmentMain(                                  \n"
+             "    texture2d<half>  inputTex  [[ texture(0) ]],              \n"
+             "    float4           fragCoord [[ position ]]                 \n"
+             ")                                                             \n"
+             "{                                                             \n"
+             "    constexpr sampler ss(                                     \n"
+             "        coord::pixel,                                         \n"
+             "        address::clamp_to_border,                             \n"
+             "        filter::linear);                                      \n"
+             "    return linearToSRGB(inputTex.sample(ss, fragCoord.xy));   \n"
+             "}                                                             \n")
+                 encoding:NSUTF8StringEncoding];
 
-    MTLLibrary *library =
-        device->newLibrary(linearToSRGB_kernel, options, &error);
+    id<MTLLibrary> library = [device newLibraryWithSource:(linearToSRGB_kernel)
+                                                  options:options
+                                                    error:&error];
 
-    MTLFunction *vertexfunction = library->newFunction(
-        NSString::string("VertexMain", NS::UTF8StringEncoding));
-    MTLFunction *Fragmentfunction = library->newFunction(
-        NSString::string("FragmentMain", NS::UTF8StringEncoding));
+    id<MTLFunction> vertexfunction = [library
+        newFunctionWithName:([NSString
+                                stringWithCString:("VertexMain")
+                                         encoding:NSUTF8StringEncoding])];
+    id<MTLFunction> Fragmentfunction = [library
+        newFunctionWithName:([NSString
+                                stringWithCString:("FragmentMain")
+                                         encoding:NSUTF8StringEncoding])];
 
     MTLRenderPipelineDescriptor *renderPipelineDesc =
-        MTLRenderPipelineDescriptor::alloc()->init();
-    renderPipelineDesc->setVertexFunction(vertexfunction);
-    renderPipelineDesc->setFragmentFunction(Fragmentfunction);
-    renderPipelineDesc->colorAttachments()->object(0)->setPixelFormat(
-        MTLPixelFormatBGRA8Unorm);
-    renderPipelineDesc->setDepthAttachmentPixelFormat(
-        MTLPixelFormatDepth32Float);
+        [[MTLRenderPipelineDescriptor alloc] init];
+    [renderPipelineDesc setVertexFunction:(vertexfunction)];
+    [renderPipelineDesc setFragmentFunction:(Fragmentfunction)];
+    [[[renderPipelineDesc colorAttachments] objectAtIndexedSubscript:0]
+        setPixelFormat:(MTLPixelFormatBGRA8Unorm)];
+    [renderPipelineDesc
+        setDepthAttachmentPixelFormat:(MTLPixelFormatDepth32Float)];
     linearToSRGB_pso =
-        device->newRenderPipelineState(renderPipelineDesc, &error);
+        [device newRenderPipelineStateWithDescriptor:(renderPipelineDesc)
+                                               error:&error];
   }
 }
 
 void MetalState::triggerProgrammaticCapture() {
-  MTLCaptureManager *captureManager =
-      MTLCaptureManager::sharedCaptureManager();
-  MTLCaptureDescriptor *captureDescriptor =
-      MTLCaptureDescriptor::alloc()->init();
+  MTLCaptureManager *captureManager = [MTLCaptureManager sharedCaptureManager];
+  MTLCaptureDescriptor *captureDescriptor = [[MTLCaptureDescriptor alloc] init];
 
-  captureDescriptor->setCaptureObject(device);
+  [captureDescriptor setCaptureObject:(device)];
 
   NSError *error = nil;
-  if (!captureManager->startCapture(captureDescriptor, &error)) {
+  if (![captureManager startCaptureWithDescriptor:captureDescriptor
+                                            error:&error]) {
 #if WITH_APPLE_NSLOG
-    NS::Log(NSString::string("Failed to start capture, error %@", error));
+    NSLog(@"Failed to start capture, error %@", error);
 #endif /* WITH_APPLE_NSLOG */
   }
 }
 
 void MetalState::stopProgrammaticCapture() {
-  MTLCaptureManager *captureManager =
-      MTLCaptureManager::sharedCaptureManager();
-  captureManager->stopCapture();
+  MTLCaptureManager *captureManager = [MTLCaptureManager sharedCaptureManager];
+  [captureManager stopCapture];
 }
 
 void MetalState::beginCommandBuffer() {
-  cmdBuffer = cmdQueue->commandBuffer();
+  cmdBuffer = [cmdQueue commandBuffer];
   inFlightCommandBuffers++;
 }
 
 void MetalState::beginEncoder(MTLRenderPassDescriptor *renderpassDesc) {
-  renderCmdEncoder = cmdBuffer->renderCommandEncoder(renderpassDesc);
+  renderCmdEncoder =
+      [cmdBuffer renderCommandEncoderWithDescriptor:renderpassDesc];
 }
 
-void MetalState::endEncoder() { renderCmdEncoder->endEncoding(); }
+void MetalState::endEncoder() { [renderCmdEncoder endEncoding]; }
 
 void MetalState::endCommandBuffer() {
   endEncoder();
-  cmdBuffer->addCompletedHandler([&](MTLCommandBuffer *buffer) -> void {
-    inFlightCommandBuffers--;
-    inFlightCV.notify_one();
-  });
-  cmdBuffer->commit();
-  cmdBuffer->waitUntilCompleted();
+  [cmdBuffer addCompletedHandler:([&](id<MTLCommandBuffer> buffer) -> void {
+               inFlightCommandBuffers--;
+               inFlightCV.notify_one();
+             })];
+  [cmdBuffer commit];
+  [cmdBuffer waitUntilCompleted];
 }
 
 void MetalState::waitForComplition() {

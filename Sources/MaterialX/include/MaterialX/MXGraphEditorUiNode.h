@@ -97,7 +97,7 @@ class UiNode {
 public:
   UiNode();
   UiNode(const std::string &name, int id);
-  ~UiNode(){};
+  ~UiNode() {};
 
   std::string getName() { return _name; }
   ImVec2 getPos() { return _nodePos; }

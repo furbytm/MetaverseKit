@@ -11,7 +11,7 @@
 #include <mutex>
 #include <stack>
 
-#include <Metal/Metal.hpp>
+#import <Metal/Metal.h>
 
 #include <MaterialX/MXCoreGenerated.h>
 
@@ -31,12 +31,12 @@ struct MetalState {
 
   MetalState();
 
-  void initialize(MTL::Device *mtlDevice, MTL::CommandQueue *mtlCmdQueue);
+  void initialize(id<MTLDevice> mtlDevice, id<MTLCommandQueue> mtlCmdQueue);
   void initLinearToSRGBKernel();
   void triggerProgrammaticCapture();
   void stopProgrammaticCapture();
   void beginCommandBuffer();
-  void beginEncoder(MTL::RenderPassDescriptor *renderpassDesc);
+  void beginEncoder(MTLRenderPassDescriptor *renderpassDesc);
   void endEncoder();
   void endCommandBuffer();
 
@@ -46,18 +46,18 @@ struct MetalState {
 
   static std::unique_ptr<MetalState> singleton;
 
-  MTL::Device *device = nil;
-  MTL::CommandQueue *cmdQueue = nil;
-  MTL::CommandBuffer *cmdBuffer = nil;
-  MTL::RenderPipelineState *linearToSRGB_pso = nil;
-  MTL::RenderCommandEncoder *renderCmdEncoder = nil;
+  id<MTLDevice> device = nil;
+  id<MTLCommandQueue> cmdQueue = nil;
+  id<MTLCommandBuffer> cmdBuffer = nil;
+  id<MTLRenderPipelineState> linearToSRGB_pso = nil;
+  id<MTLRenderCommandEncoder> renderCmdEncoder = nil;
   std::stack<MaterialX::MetalFramebufferPtr> framebufferStack;
 
   bool supportsTiledPipeline;
 
-  MTL::DepthStencilState *opaqueDepthStencilState = nil;
-  MTL::DepthStencilState *transparentDepthStencilState = nil;
-  MTL::DepthStencilState *envMapDepthStencilState = nil;
+  id<MTLDepthStencilState> opaqueDepthStencilState = nil;
+  id<MTLDepthStencilState> transparentDepthStencilState = nil;
+  id<MTLDepthStencilState> envMapDepthStencilState = nil;
 
   std::condition_variable inFlightCV;
   std::mutex inFlightMutex;

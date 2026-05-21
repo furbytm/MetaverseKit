@@ -17,7 +17,7 @@
 
 #include <MaterialX/MXRenderShaderRenderer.h>
 
-#include <Metal/Metal.hpp>
+#import <Metal/Metal.h>
 
 MATERIALX_NAMESPACE_BEGIN
 
@@ -58,7 +58,7 @@ public:
   }
 
   /// Returns Metal Device used for rendering
-  MTL::Device *getMetalDevice() const;
+  id<MTLDevice> getMetalDevice() const;
 
   /// Destructor
   virtual ~MslRenderer() {}
@@ -133,9 +133,9 @@ protected:
 private:
   MslProgramPtr _program;
 
-  MTL::Device *_device = nil;
-  MTL::CommandQueue *_cmdQueue = nil;
-  MTL::CommandBuffer *_cmdBuffer = nil;
+  id<MTLDevice> _device = nil;
+  id<MTLCommandQueue> _cmdQueue = nil;
+  id<MTLCommandBuffer> _cmdBuffer = nil;
 
   MetalFramebufferPtr _framebuffer;
 

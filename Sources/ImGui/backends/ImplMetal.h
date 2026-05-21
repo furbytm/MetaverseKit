@@ -52,22 +52,22 @@ IMGUI_IMPL_API void ImGui_ImplMetal_DestroyDeviceObjects();
 // https://developer.apple.com/metal/cpp/
 
 #ifdef IMGUI_IMPL_METAL_CPP
-#include <Metal/Metal.hpp>
+#import <Metal/Metal.h>
 #ifndef __OBJC__
 
-IMGUI_IMPL_API bool ImGui_ImplMetal_Init(MTL::Device *device);
+IMGUI_IMPL_API bool ImGui_ImplMetal_Init(id<MTLDevice> device);
 IMGUI_IMPL_API void ImGui_ImplMetal_Shutdown();
 IMGUI_IMPL_API void
-ImGui_ImplMetal_NewFrame(MTL::RenderPassDescriptor *renderPassDescriptor);
+ImGui_ImplMetal_NewFrame(MTLRenderPassDescriptor *renderPassDescriptor);
 IMGUI_IMPL_API void
 ImGui_ImplMetal_RenderDrawData(ImDrawData *draw_data,
-                               MTL::CommandBuffer *commandBuffer,
-                               MTL::RenderCommandEncoder *commandEncoder);
+                               id<MTLCommandBuffer> commandBuffer,
+                               id<MTLRenderCommandEncoder> commandEncoder);
 
 // Called by Init/NewFrame/Shutdown
-IMGUI_IMPL_API bool ImGui_ImplMetal_CreateFontsTexture(MTL::Device *device);
+IMGUI_IMPL_API bool ImGui_ImplMetal_CreateFontsTexture(id<MTLDevice> device);
 IMGUI_IMPL_API void ImGui_ImplMetal_DestroyFontsTexture();
-IMGUI_IMPL_API bool ImGui_ImplMetal_CreateDeviceObjects(MTL::Device *device);
+IMGUI_IMPL_API bool ImGui_ImplMetal_CreateDeviceObjects(id<MTLDevice> device);
 IMGUI_IMPL_API void ImGui_ImplMetal_DestroyDeviceObjects();
 
 #endif

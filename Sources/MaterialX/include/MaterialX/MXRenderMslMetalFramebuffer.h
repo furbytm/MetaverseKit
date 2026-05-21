@@ -13,7 +13,7 @@
 
 #include <MaterialX/MXRenderImageHandler.h>
 
-#include <Metal/Metal.hpp>
+#import <Metal/Metal.h>
 
 MATERIALX_NAMESPACE_BEGIN
 
@@ -28,10 +28,10 @@ class MX_RENDERMSL_API MetalFramebuffer {
 public:
   /// Create a new framebuffer
   static MetalFramebufferPtr
-  create(MTL::Device *device, unsigned int width, unsigned int height,
+  create(id<MTLDevice> device, unsigned int width, unsigned int height,
          unsigned int channelCount, Image::BaseType baseType,
-         MTL::Texture *colorTexture = nil, bool encodeSrgb = false,
-         MTL::PixelFormat pixelFormat = MTL::PixelFormatInvalid);
+         id<MTLTexture> colorTexture = nil, bool encodeSrgb = false,
+         MTLPixelFormat pixelFormat = MTLPixelFormatInvalid);
 
   /// Destructor
   virtual ~MetalFramebuffer();
@@ -39,8 +39,8 @@ public:
   /// Resize the framebuffer
   void resize(unsigned int width, unsigned int height,
               bool forceRecreate = false,
-              MTL::PixelFormat pixelFormat = MTL::PixelFormatInvalid,
-              MTL::Texture *extColorTexture = nil);
+              MTLPixelFormat pixelFormat = MTLPixelFormatInvalid,
+              id<MTLTexture> extColorTexture = nil);
 
   /// Set the encode sRGB flag, which controls whether values written
   /// to the framebuffer are encoded to the sRGB color space.
@@ -61,40 +61,43 @@ public:
   unsigned int getHeight() const { return _height; }
 
   /// Bind the framebuffer for rendering.
-  void bind(MTL::RenderPassDescriptor *renderpassDesc);
+  void bind(MTLRenderPassDescriptor *renderpassDesc);
 
   /// Unbind the frame buffer after rendering.
   void unbind();
 
   /// Return our color texture handle.
-  MTL::Texture *getColorTexture() const { return _colorTexture; }
+  id<MTLTexture> getColorTexture() const { return _colorTexture; }
 
-  void setColorTexture(MTL::Texture *newColorTexture) {
-    auto sameDim = [](MTL::Texture *tex0, MTL::Texture *tex1) -> bool {
-      return tex0->width() == tex1->width() && tex0->height() == tex1->height();
+  void setColorTexture(id<MTLTexture> newColorTexture) {
+    auto sameDim = [](id<MTLTexture> tex0, id<MTLTexture> tex1) -> bool {
+      return tex0.width == tex1.width && tex0.height == tex1.height;
     };
     if ((!_colorTextureOwned || sameDim(_colorTexture, newColorTexture)) &&
         sameDim(newColorTexture, _depthTexture)) {
       if (_colorTextureOwned)
-        _colorTexture->release();
+#if !__has_feature(objc_arc)
+        _colorTexture.release();
+#endif // __has_feature(objc_arc)
       _colorTexture = newColorTexture;
     }
   }
 
   /// Return our depth texture handle.
-  MTL::Texture *getDepthTexture() const { return _depthTexture; }
+  id<MTLTexture> getDepthTexture() const { return _depthTexture; }
 
   /// Return the color data of this framebuffer as an image.
   /// If an input image is provided, it will be used to store the color data;
   /// otherwise a new image of the required format will be created.
-  ImagePtr getColorImage(MTL::CommandQueue *cmdQueue = nil,
+  ImagePtr getColorImage(id<MTLCommandQueue> cmdQueue = nil,
                          ImagePtr image = nullptr);
 
 protected:
-  MetalFramebuffer(MTL::Device *device, unsigned int width, unsigned int height,
-                   unsigned int channelCount, Image::BaseType baseType,
-                   MTL::Texture *colorTexture = nil, bool encodeSrgb = false,
-                   MTL::PixelFormat pixelFormat = MTL::PixelFormatInvalid);
+  MetalFramebuffer(id<MTLDevice> device, unsigned int width,
+                   unsigned int height, unsigned int channelCount,
+                   Image::BaseType baseType, id<MTLTexture> colorTexture = nil,
+                   bool encodeSrgb = false,
+                   MTLPixelFormat pixelFormat = MTLPixelFormatInvalid);
 
 protected:
   unsigned int _width;
@@ -103,9 +106,9 @@ protected:
   Image::BaseType _baseType;
   bool _encodeSrgb;
 
-  MTL::Device *_device = nil;
-  MTL::Texture *_colorTexture = nil;
-  MTL::Texture *_depthTexture = nil;
+  id<MTLDevice> _device = nil;
+  id<MTLTexture> _colorTexture = nil;
+  id<MTLTexture> _depthTexture = nil;
 
   bool _colorTextureOwned = false;
 };

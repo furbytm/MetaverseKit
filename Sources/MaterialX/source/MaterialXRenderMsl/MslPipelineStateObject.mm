@@ -3,10 +3,12 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-// #import <Foundation/Foundation.h>
+#import <Foundation/Foundation.h>
+
 #include <MaterialX/MXRenderMslMetalFramebuffer.h>
 #include <MaterialX/MXRenderMslMetalTextureHandler.h>
 #include <MaterialX/MXRenderMslPipelineStateObject.h>
+
 #import <Metal/Metal.h>
 
 #include <MaterialX/MXRenderLightHandler.h>
@@ -124,8 +126,8 @@ int GetStrideOfMetalType(MTLDataType type) {
   return 0;
 }
 
-MTLRenderPipelineState *MslProgram::build(id<MTLDevice> device,
-                                          MetalFramebufferPtr framebuffer) {
+id<MTLRenderPipelineState> MslProgram::build(id<MTLDevice> device,
+                                             MetalFramebufferPtr framebuffer) {
   StringVec errors;
   const string errorType("MSL program creation error.");
 
@@ -142,16 +144,16 @@ MTLRenderPipelineState *MslProgram::build(id<MTLDevice> device,
       desiredStages++;
   }
 
-  MTLCompileOptions *options = MTLCompileOptions::alloc()->init();
+  MTLCompileOptions *options = [[MTLCompileOptions alloc] init];
 #if defined(MAC_OS_VERSION_11_0) || defined(IPHONE_OS_VERSION_14_0)
-  options->setLanguageVersion(MTLLanguageVersion2_3);
+  [options setLanguageVersion:(MTLLanguageVersion2_3)];
 #else
-  options->setLanguageVersion(MTLLanguageVersion2_0);
+  [options setLanguageVersion:(MTLLanguageVersion2_0)];
 #endif // defined(MAC_OS_VERSION_11_0) || defined(IPHONE_OS_VERSION_14_0)
-  options->setFastMathEnabled(true);
+  [options setFastMathEnabled:(true)];
 
   // Create vertex shader
-  MTLFunction *vertexShaderId = nil;
+  id<MTLFunction> vertexShaderId = nil;
   {
     string &vertexShaderSource = _stages[Stage::VERTEX];
     if (vertexShaderSource.length() < 1) {
@@ -160,19 +162,24 @@ MTLRenderPipelineState *MslProgram::build(id<MTLDevice> device,
     }
 
     NSString *sourcCode =
-        NSString::string(vertexShaderSource.c_str(), NS::UTF8StringEncoding);
-    MTLLibrary *library = device->newLibrary(sourcCode, options, &error);
+        [NSString stringWithCString:(vertexShaderSource.c_str())
+                           encoding:NSUTF8StringEncoding];
+    id<MTLLibrary> library = [device newLibraryWithSource:sourcCode
+                                                  options:options
+                                                    error:&error];
 
     if (library == nil) {
       errors.push_back("Error in compiling vertex shader:");
       if (error) {
-        errors.push_back(error->localizedDescription()->utf8String());
+        errors.push_back([[error localizedDescription] UTF8String]);
       }
       return nil;
     }
 
-    vertexShaderId = library->newFunction(
-        NSString::string("VertexMain", NS::UTF8StringEncoding));
+    vertexShaderId = [library
+        newFunctionWithName:([NSString
+                                stringWithCString:("VertexMain")
+                                         encoding:NSUTF8StringEncoding])];
 
     if (vertexShaderId) {
       stagesBuilt++;
@@ -187,24 +194,29 @@ MTLRenderPipelineState *MslProgram::build(id<MTLDevice> device,
   }
 
   // Fragment shader compilation code
-  MTLFunction *fragmentShaderId = nil;
+  id<MTLFunction> fragmentShaderId = nil;
   {
-    NSString *sourcCode = NSString::string(fragmentShaderSource.c_str(),
-                                               NS::UTF8StringEncoding);
-    MTLLibrary *library = device->newLibrary(sourcCode, options, &error);
+    NSString *sourcCode =
+        [NSString stringWithCString:(fragmentShaderSource.c_str())
+                           encoding:NSUTF8StringEncoding];
+    id<MTLLibrary> library = [device newLibraryWithSource:sourcCode
+                                                  options:options
+                                                    error:&error];
     if (!library) {
       errors.push_back("Error in compiling fragment shader:");
       if (error) {
         std::string libCompilationError =
-            error->localizedDescription()->utf8String();
+            [[error localizedDescription] UTF8String];
         printf("Compilation Errors:%s\n", libCompilationError.c_str());
         errors.push_back(libCompilationError);
         return nil;
       }
     }
 
-    fragmentShaderId = library->newFunction(
-        NSString::string("FragmentMain", NS::UTF8StringEncoding));
+    fragmentShaderId = [library
+        newFunctionWithName:([NSString
+                                stringWithCString:("FragmentMain")
+                                         encoding:NSUTF8StringEncoding])];
     assert(fragmentShaderId);
 
     if (library) {
@@ -212,51 +224,48 @@ MTLRenderPipelineState *MslProgram::build(id<MTLDevice> device,
     }
   }
 
-  // Link stages to a programs
+  // Link stages to a program
   if (stagesBuilt == desiredStages) {
     MTLRenderPipelineDescriptor *psoDesc =
-        MTLRenderPipelineDescriptor::alloc()->init();
-    psoDesc->setVertexFunction(vertexShaderId);
-    psoDesc->setFragmentFunction(fragmentShaderId);
-    psoDesc->colorAttachments()->object(0)->setPixelFormat(
-        framebuffer->getColorTexture()->pixelFormat());
-    psoDesc->setDepthAttachmentPixelFormat(MTLPixelFormatDepth32Float);
+        [[MTLRenderPipelineDescriptor alloc] init];
+    psoDesc.vertexFunction = vertexShaderId;
+    psoDesc.fragmentFunction = fragmentShaderId;
+    psoDesc.colorAttachments[0].pixelFormat =
+        framebuffer->getColorTexture().pixelFormat;
+    psoDesc.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
 
     if (_shader->hasAttribute(HW::ATTR_TRANSPARENT)) {
-      psoDesc->colorAttachments()->object(0)->setBlendingEnabled(YES);
-      psoDesc->colorAttachments()->object(0)->setRgbBlendOperation(
-          MTLBlendOperationAdd);
-      psoDesc->colorAttachments()->object(0)->setAlphaBlendOperation(
-          MTLBlendOperationAdd);
-      psoDesc->colorAttachments()->object(0)->setSourceRGBBlendFactor(
-          MTLBlendFactorSourceAlpha);
-      psoDesc->colorAttachments()->object(0)->setSourceAlphaBlendFactor(
-          MTLBlendFactorSourceAlpha);
-      psoDesc->colorAttachments()->object(0)->setDestinationRGBBlendFactor(
-          MTLBlendFactorOneMinusSourceAlpha);
-      psoDesc->colorAttachments()->object(0)->setDestinationAlphaBlendFactor(
-          MTLBlendFactorOneMinusSourceAlpha);
+      psoDesc.colorAttachments[0].blendingEnabled = YES;
+      psoDesc.colorAttachments[0].rgbBlendOperation = MTLBlendOperationAdd;
+      psoDesc.colorAttachments[0].alphaBlendOperation = MTLBlendOperationAdd;
+      psoDesc.colorAttachments[0].sourceRGBBlendFactor =
+          MTLBlendFactorSourceAlpha;
+      psoDesc.colorAttachments[0].sourceAlphaBlendFactor =
+          MTLBlendFactorSourceAlpha;
+      psoDesc.colorAttachments[0].destinationRGBBlendFactor =
+          MTLBlendFactorOneMinusSourceAlpha;
+      psoDesc.colorAttachments[0].destinationAlphaBlendFactor =
+          MTLBlendFactorOneMinusSourceAlpha;
 
       _alphaBlendingEnabled = true;
     }
 
-    MTLVertexDescriptor *vd = MTLVertexDescriptor::alloc()->init();
+    MTLVertexDescriptor *vd = [[MTLVertexDescriptor alloc] init];
 
-    for (int i = 0; i < vertexShaderId->vertexAttributes()->count(); ++i) {
-      MTLVertexAttribute *vertexAttrib =
-          vertexShaderId->vertexAttributes()->object<MTLVertexAttribute>(i);
+    for (int i = 0; i < (int)vertexShaderId.vertexAttributes.count; ++i) {
+      MTLVertexAttribute *vertexAttrib = vertexShaderId.vertexAttributes[i];
 
-      vd->attributes()->object(i)->setBufferIndex(i);
-      vd->attributes()->object(i)->setFormat(
-          GetMetalFormatFromMetalType(vertexAttrib->attributeType()));
-      vd->attributes()->object(i)->setOffset(0);
+      vd.attributes[i].bufferIndex = i;
+      vd.attributes[i].format =
+          GetMetalFormatFromMetalType(vertexAttrib.attributeType);
+      vd.attributes[i].offset = 0;
 
       InputPtr inputPtr = std::make_shared<Input>(
-          vertexAttrib->attributeIndex(), vertexAttrib->attributeType(),
-          GetStrideOfMetalType(vertexAttrib->attributeType()), EMPTY_STRING);
+          [vertexAttrib attributeIndex], [vertexAttrib attributeType],
+          GetStrideOfMetalType([vertexAttrib attributeType]), EMPTY_STRING);
       // Attempt to pull out the set number for specific attributes
       //
-      string sattributeName(vertexAttrib->name()->utf8String());
+      string sattributeName([[vertexAttrib name] UTF8String]);
       const string colorSet(HW::IN_COLOR + "_");
       const string uvSet(HW::IN_TEXCOORD + "_");
       if (string::npos != sattributeName.find(colorSet)) {
@@ -273,25 +282,29 @@ MTLRenderPipelineState *MslProgram::build(id<MTLDevice> device,
 
       _attributeList[sattributeName] = inputPtr;
 
-      vd->layouts()->object(i)->setStride(
-          GetStrideOfMetalType(vertexAttrib->attributeType()));
-      vd->layouts()->object(i)->setStepFunction(
-          MTLVertexStepFunctionPerVertex);
+      vd.layouts[i].stride = GetStrideOfMetalType(vertexAttrib.attributeType);
+      vd.layouts[i].stepFunction = MTLVertexStepFunctionPerVertex;
     }
 
-    psoDesc->setVertexDescriptor(vd);
+    psoDesc.vertexDescriptor = vd;
 
-    _pso = device->newRenderPipelineState(psoDesc,
-                                          MTLPipelineOptionArgumentInfo |
-                                              MTLPipelineOptionBufferTypeInfo,
-                                          &_psoReflection, &error);
+    MTLRenderPipelineReflection *reflection = nil;
+    _pso = [device
+        newRenderPipelineStateWithDescriptor:psoDesc
+                                     options:(MTLPipelineOptionArgumentInfo |
+                                              MTLPipelineOptionBufferTypeInfo)
+                                  reflection:&reflection
+                                       error:&error];
+    _psoReflection = reflection;
 
-    _pso->retain();
-    _psoReflection->retain();
+#if !__has_feature(objc_arc)
+    [_pso retain];
+    [_psoReflection retain];
+#endif // !__has_feature(objc_arc)
 
     if (error) {
       errors.push_back("Error in linking program:");
-      errors.push_back(error->localizedDescription()->utf8String());
+      errors.push_back([[error localizedDescription] UTF8String]);
     }
   } else {
     errors.push_back("Failed to build all stages.");
@@ -310,16 +323,16 @@ MTLRenderPipelineState *MslProgram::build(id<MTLDevice> device,
   return _pso;
 }
 
-bool MslProgram::bind(MTLRenderCommandEncoder *renderCmdEncoder) {
+bool MslProgram::bind(id<MTLRenderCommandEncoder> renderCmdEncoder) {
   if (_pso != nil) {
-    renderCmdEncoder->setRenderPipelineState(_pso);
+    [renderCmdEncoder setRenderPipelineState:_pso];
     return true;
   }
   return false;
 }
 
 void MslProgram::prepareUsedResources(
-    MTLRenderCommandEncoder *renderCmdEncoder, CameraPtr cam,
+    id<MTLRenderCommandEncoder> renderCmdEncoder, CameraPtr cam,
     GeometryHandlerPtr geometryHandler, ImageHandlerPtr imageHandler,
     LightHandlerPtr lightHandler) {
   // Bind the program to use
@@ -342,7 +355,7 @@ void MslProgram::prepareUsedResources(
   bindUniformBuffers(renderCmdEncoder, lightHandler, cam);
 }
 
-void MslProgram::bindAttribute(MTLRenderCommandEncoder *renderCmdEncoder,
+void MslProgram::bindAttribute(id<MTLRenderCommandEncoder> renderCmdEncoder,
                                const MslProgram::InputMap &inputs,
                                MeshPtr mesh) {
   const string errorType("MSL bind attribute error.");
@@ -400,13 +413,16 @@ void MslProgram::bindAttribute(MTLRenderCommandEncoder *renderCmdEncoder,
       }
 
       // Create a buffer based on attribute type.
-      MTLBuffer *buffer = _device->newBuffer(bufferData, bufferSize,
-                                               MTLResourceStorageModeShared);
+      id<MTLBuffer> buffer =
+          [_device newBufferWithBytes:bufferData
+                               length:bufferSize
+                              options:MTLResourceStorageModeShared];
       _attributeBufferIds[input.first] = buffer;
     }
 
-    renderCmdEncoder->setVertexBuffer(_attributeBufferIds[input.first], 0,
-                                      location);
+    [renderCmdEncoder setVertexBuffer:_attributeBufferIds[input.first]
+                               offset:0
+                              atIndex:location];
   }
 }
 
@@ -421,14 +437,15 @@ void MslProgram::bindPartition(MeshPartitionPtr part) {
   if (_indexBufferIds.find(part) == _indexBufferIds.end()) {
     MeshIndexBuffer &indexData = part->getIndices();
     size_t indexBufferSize = indexData.size();
-    MTLBuffer *indexBuffer =
-        _device->newBuffer(&indexData[0], indexBufferSize * sizeof(uint32_t),
-                           MTLStorageModeShared);
+    id<MTLBuffer> indexBuffer =
+        [_device newBufferWithBytes:&indexData[0]
+                             length:indexBufferSize * sizeof(uint32_t)
+                            options:MTLStorageModeShared];
     _indexBufferIds[part] = indexBuffer;
   }
 }
 
-void MslProgram::bindMesh(MTLRenderCommandEncoder *renderCmdEncoder,
+void MslProgram::bindMesh(id<MTLRenderCommandEncoder> renderCmdEncoder,
                           MeshPtr mesh) {
   StringVec errors;
   const string errorType("MSL geometry bind error.");
@@ -496,17 +513,25 @@ void MslProgram::bindMesh(MTLRenderCommandEncoder *renderCmdEncoder,
 void MslProgram::unbindGeometry() {
   // Clean up buffers
   //
+  // (1) slight optimization when ARC is enabled...
+#if !__has_feature(objc_arc)
   for (const auto &attributeBufferId : _attributeBufferIds) {
-    attributeBufferId.second->release();
+    [attributeBufferId.second release];
   }
+#endif // !__has_feature(objc_arc)
+
   _attributeBufferIds.clear();
+
+  // (2) slight optimization when ARC is enabled...
+#if !__has_feature(objc_arc)
   for (const auto &indexBufferId : _indexBufferIds) {
-    indexBufferId.second->release();
+    [indexBufferId.second release];
   }
+#endif // !__has_feature(objc_arc)
   _indexBufferIds.clear();
 }
 
-ImagePtr MslProgram::bindTexture(MTLRenderCommandEncoder *renderCmdEncoder,
+ImagePtr MslProgram::bindTexture(id<MTLRenderCommandEncoder> renderCmdEncoder,
                                  unsigned int uniformLocation,
                                  const FilePath &filePath,
                                  ImageSamplingProperties samplingProperties,
@@ -519,7 +544,7 @@ ImagePtr MslProgram::bindTexture(MTLRenderCommandEncoder *renderCmdEncoder,
   return bindTexture(renderCmdEncoder, uniformLocation, image, imageHandler);
 }
 
-ImagePtr MslProgram::bindTexture(MTLRenderCommandEncoder *renderCmdEncoder,
+ImagePtr MslProgram::bindTexture(id<MTLRenderCommandEncoder> renderCmdEncoder,
                                  unsigned int uniformLocation, ImagePtr image,
                                  ImageHandlerPtr imageHandler) {
   // Acquire the image.
@@ -544,16 +569,15 @@ MslProgram::findUniformValue(const string &uniformName,
   return nullptr;
 }
 
-void MslProgram::bindTextures(MTLRenderCommandEncoder *renderCmdEncoder,
+void MslProgram::bindTextures(id<MTLRenderCommandEncoder> renderCmdEncoder,
                               LightHandlerPtr lightHandler,
                               ImageHandlerPtr imageHandler) {
   const VariableBlock &publicUniforms =
       _shader->getStage(Stage::PIXEL).getUniformBlock(HW::PUBLIC_UNIFORMS);
-  for (NS::UInteger argIdx = 0;
-       argIdx < _psoReflection->fragmentArguments()->count(); argIdx++) {
-    if (_psoReflection->fragmentArguments()
-            ->object<MTLArgument>(argIdx)
-            ->type() == MTLArgumentTypeTexture) {
+  for (NSUInteger argIdx = 0; argIdx < [_psoReflection fragmentArguments].count;
+       argIdx++) {
+    if ([[_psoReflection fragmentArguments] objectAtIndex:(argIdx)].type ==
+        MTLArgumentTypeTexture) {
       bool found = false;
 
       if (lightHandler) {
@@ -562,10 +586,9 @@ void MslProgram::bindTextures(MTLRenderCommandEncoder *renderCmdEncoder,
             {HW::ENV_RADIANCE, lightHandler->getEnvRadianceMap()},
             {HW::ENV_IRRADIANCE, lightHandler->getEnvIrradianceMap()}};
         for (const auto &env : envLights) {
-          std::string str(_psoReflection->fragmentArguments()
-                              ->object<MTLArgument>(argIdx)
-                              ->name()
-                              ->utf8String());
+          std::string str(
+              [[_psoReflection fragmentArguments] objectAtIndex:(argIdx)]
+                  .name.UTF8String);
           size_t loc = str.find(env.first);
           if (loc != std::string::npos && env.second) {
             ImageSamplingProperties samplingProperties;
@@ -579,9 +602,9 @@ void MslProgram::bindTextures(MTLRenderCommandEncoder *renderCmdEncoder,
             static_cast<MaterialX::MetalTextureHandler *>(imageHandler.get())
                 ->bindImage(env.second, samplingProperties);
             bindTexture(renderCmdEncoder,
-                        (unsigned int)_psoReflection->fragmentArguments()
-                            ->object<MTLArgument>(argIdx)
-                            ->index(),
+                        (unsigned int)[[_psoReflection fragmentArguments]
+                            objectAtIndex:(argIdx)]
+                            .index,
                         env.second, imageHandler);
             found = true;
           }
@@ -590,32 +613,28 @@ void MslProgram::bindTextures(MTLRenderCommandEncoder *renderCmdEncoder,
 
       if (!found) {
         ImagePtr image = nullptr;
-        if (_explicitBoundImages.find(_psoReflection->fragmentArguments()
-                                          ->object<MTLArgument>(argIdx)
-                                          ->name()
-                                          ->utf8String()) !=
-            _explicitBoundImages.end()) {
-          image = _explicitBoundImages[_psoReflection->fragmentArguments()
-                                           ->object<MTLArgument>(argIdx)
-                                           ->name()
-                                           ->utf8String()];
+        if (_explicitBoundImages.find(
+                [[_psoReflection fragmentArguments] objectAtIndex:(argIdx)]
+                    .name.UTF8String) != _explicitBoundImages.end()) {
+          image = _explicitBoundImages[
+              [[_psoReflection fragmentArguments] objectAtIndex:(argIdx)]
+                  .name.UTF8String];
         }
 
         if (image && (image->getWidth() > 1 || image->getHeight() > 1)) {
           bindTexture(renderCmdEncoder,
-                      (unsigned int)_psoReflection->fragmentArguments()
-                          ->object<MTLArgument>(argIdx)
-                          ->index(),
+                      (unsigned int)[[_psoReflection fragmentArguments]
+                          objectAtIndex:(argIdx)]
+                          .index,
                       image, imageHandler);
           found = true;
         }
       }
 
       if (!found) {
-        auto uniform = _uniformList.find(_psoReflection->fragmentArguments()
-                                             ->object<MTLArgument>(argIdx)
-                                             ->name()
-                                             ->utf8String());
+        auto uniform = _uniformList.find(
+            [[_psoReflection fragmentArguments] objectAtIndex:(argIdx)]
+                .name.UTF8String);
         if (uniform != _uniformList.end()) {
           string fileName = uniform->second->value
                                 ? uniform->second->value->getValueString()
@@ -633,9 +652,9 @@ void MslProgram::bindTextures(MTLRenderCommandEncoder *renderCmdEncoder,
                                            publicUniforms);
           samplingProperties.enableMipmaps = _enableMipMapping;
           bindTexture(renderCmdEncoder,
-                      (unsigned int)_psoReflection->fragmentArguments()
-                          ->object<MTLArgument>(argIdx)
-                          ->index(),
+                      (unsigned int)[[_psoReflection fragmentArguments]
+                          objectAtIndex:(argIdx)]
+                          .index,
                       fileName, samplingProperties, imageHandler);
         }
       }
@@ -860,125 +879,94 @@ const MslProgram::InputMap &MslProgram::updateUniformsList() {
     throw ExceptionRenderError(errorType, errors);
   }
 
-  for (NS::UInteger argIdx = 0;
-       argIdx < _psoReflection->vertexArguments()->count(); argIdx++) {
-    if (_psoReflection->vertexArguments()
-            ->object<MTLArgument>(argIdx)
-            ->bufferDataType() == MTLDataTypeStruct) {
-      for (NS::UInteger memberIdx = 0;
-           memberIdx < _psoReflection->vertexArguments()
-                           ->object<MTLStructMember>(argIdx)
-                           ->structType()
-                           ->members()
-                           ->count();
+  for (NSUInteger argIdx = 0; argIdx < [_psoReflection vertexArguments].count;
+       argIdx++) {
+    if ([[_psoReflection vertexArguments] objectAtIndex:(argIdx)]
+            .bufferDataType == MTLDataTypeStruct) {
+      for (NSUInteger memberIdx = 0;
+           memberIdx < [[_psoReflection vertexArguments] objectAtIndex:(argIdx)]
+                           .bufferStructType.members.count;
            memberIdx++) {
-        InputPtr inputPtr =
-            std::make_shared<Input>(_psoReflection->vertexArguments()
-                                        ->object<MTLArgument>(argIdx)
-                                        ->index(),
-                                    _psoReflection->vertexArguments()
-                                        ->object<MTLStructMember>(argIdx)
-                                        ->dataType(),
-                                    _psoReflection->vertexArguments()
-                                        ->object<MTLArgument>(argIdx)
-                                        ->bufferDataSize(),
-                                    EMPTY_STRING);
-        std::string memberName = _psoReflection->vertexArguments()
-                                     ->object<MTLStructMember>(argIdx)
-                                     ->name()
-                                     ->utf8String();
+        InputPtr inputPtr = std::make_shared<Input>(
+            [[_psoReflection vertexArguments] objectAtIndex:(argIdx)].index,
+            [[_psoReflection vertexArguments] objectAtIndex:(argIdx)]
+                .bufferDataType,
+            [[_psoReflection vertexArguments] objectAtIndex:(argIdx)]
+                .bufferDataSize,
+            EMPTY_STRING);
+        std::string memberName =
+            [[_psoReflection vertexArguments] objectAtIndex:(argIdx)]
+                .name.UTF8String;
         std::string uboDotMemberName =
-            std::string(_psoReflection->vertexArguments()
-                            ->object<MTLArgument>(argIdx)
-                            ->name()
-                            ->utf8String()) +
+            std::string(
+                [[_psoReflection vertexArguments] objectAtIndex:(argIdx)]
+                    .name.UTF8String) +
             "." +
-            _psoReflection->vertexArguments()
-                ->object<MTLStructMember>(argIdx)
-                ->name()
-                ->utf8String();
+            [[_psoReflection vertexArguments] objectAtIndex:(argIdx)]
+                .name.UTF8String;
         _uniformList[uboDotMemberName] = inputPtr;
-        _globalUniformNameList[_psoReflection->vertexArguments()
-                                   ->object<MTLStructMember>(argIdx)
-                                   ->name()
-                                   ->utf8String()] = uboDotMemberName;
+        _globalUniformNameList[
+            [[_psoReflection vertexArguments] objectAtIndex:(argIdx)]
+                .name.UTF8String] = uboDotMemberName;
       }
     }
   }
 
-  for (NS::UInteger argIdx = 0;
-       argIdx < _psoReflection->fragmentArguments()->count(); argIdx++) {
-    if (_psoReflection->fragmentArguments()
-                ->object<MTLArgument>(argIdx)
-                ->type() == MTLArgumentTypeBuffer &&
-        _psoReflection->fragmentArguments()
-                ->object<MTLArgument>(argIdx)
-                ->bufferDataType() == MTLDataTypeStruct) {
-      for (NS::UInteger memberIdx = 0;
-           memberIdx < _psoReflection->fragmentArguments()
-                           ->object<MTLStructMember>(argIdx)
-                           ->structType()
-                           ->members()
-                           ->count();
+  for (NSUInteger argIdx = 0; argIdx < [_psoReflection fragmentArguments].count;
+       argIdx++) {
+    if ([[_psoReflection fragmentArguments] objectAtIndex:(argIdx)].type ==
+            MTLArgumentTypeBuffer &&
+        [[_psoReflection fragmentArguments] objectAtIndex:(argIdx)]
+                .bufferDataType == MTLDataTypeStruct) {
+      for (NSUInteger memberIdx = 0;
+           memberIdx < [[_psoReflection fragmentArguments]
+                           objectAtIndex:(argIdx)]
+                           .bufferStructType.members.count;
            memberIdx++) {
-        std::string uboObjectName =
-            std::string(_psoReflection->fragmentArguments()
-                            ->object<MTLArgument>(argIdx)
-                            ->name()
-                            ->utf8String());
-        std::string memberName = _psoReflection->fragmentArguments()
-                                     ->object<MTLStructMember>(argIdx)
-                                     ->name()
-                                     ->utf8String();
+        std::string uboObjectName = std::string(
+            [[_psoReflection fragmentArguments] objectAtIndex:(argIdx)]
+                .name.UTF8String);
+        std::string memberName =
+            [[_psoReflection fragmentArguments] objectAtIndex:(argIdx)]
+                .name.UTF8String;
         std::string uboDotMemberName = uboObjectName + "." + memberName;
 
-        InputPtr inputPtr =
-            std::make_shared<Input>(_psoReflection->fragmentArguments()
-                                        ->object<MTLArgument>(argIdx)
-                                        ->index(),
-                                    _psoReflection->fragmentArguments()
-                                        ->object<MTLStructMember>(argIdx)
-                                        ->dataType(),
-                                    _psoReflection->fragmentArguments()
-                                        ->object<MTLArgument>(argIdx)
-                                        ->bufferDataSize(),
-                                    EMPTY_STRING);
+        InputPtr inputPtr = std::make_shared<Input>(
+            [[_psoReflection fragmentArguments] objectAtIndex:(argIdx)].index,
+            [[_psoReflection fragmentArguments] objectAtIndex:(argIdx)]
+                .bufferDataType,
+            [[_psoReflection fragmentArguments] objectAtIndex:(argIdx)]
+                .bufferDataSize,
+            EMPTY_STRING);
         _uniformList[uboDotMemberName] = inputPtr;
         _globalUniformNameList[memberName] = uboDotMemberName;
 
-        if (MTLArrayType *arrayMember =
-                _psoReflection->fragmentArguments()
-                    ->object<MTLStructMember>(argIdx)
-                    ->arrayType()) {
-          for (int i = 0; i < arrayMember->arrayLength(); ++i) {
-            for (NS::UInteger arrayStructIdx = 0;
-                 arrayStructIdx <
-                 arrayMember->elementStructType()->members()->count();
+        if (MTLArgument *arrayMember =
+                [[_psoReflection fragmentArguments] objectAtIndex:(argIdx)]) {
+
+          for (int i = 0; i < arrayMember.arrayLength; ++i) {
+            for (NSUInteger arrayStructIdx = 0;
+                 arrayStructIdx < arrayMember.bufferStructType.members.count;
                  arrayStructIdx++) {
               std::string memberNameDotSubmember =
                   memberName + "[" + std::to_string(i) + "]." +
-                  arrayMember->elementStructType()
-                      ->members()
-                      ->object<MTLStructMember>(arrayStructIdx)
-                      ->name()
-                      ->utf8String();
+                  [arrayMember.bufferStructType.members
+                      objectAtIndex:(arrayStructIdx)]
+                      .name.UTF8String;
               std::string uboDotMemberNameDotSubmemberName =
                   uboObjectName + "." + memberNameDotSubmember;
 
-              InputPtr inputPtr = std::make_shared<Input>(
-                  arrayMember->elementStructType()
-                      ->members()
-                      ->object<MTLStructMember>(arrayStructIdx)
-                      ->argumentIndex(),
-                  arrayMember->elementStructType()
-                      ->members()
-                      ->object<MTLStructMember>(arrayStructIdx)
-                      ->dataType(),
-                  arrayMember->elementStructType()
-                      ->members()
-                      ->object<MTLStructMember>(arrayStructIdx)
-                      ->offset(),
-                  EMPTY_STRING);
+              InputPtr inputPtr =
+                  std::make_shared<Input>([arrayMember.bufferStructType.members
+                                              objectAtIndex:(arrayStructIdx)]
+                                              .argumentIndex,
+                                          [arrayMember.bufferStructType.members
+                                              objectAtIndex:(arrayStructIdx)]
+                                              .dataType,
+                                          [arrayMember.bufferStructType.members
+                                              objectAtIndex:(arrayStructIdx)]
+                                              .offset,
+                                          EMPTY_STRING);
               _uniformList[uboDotMemberNameDotSubmemberName] = inputPtr;
               _globalUniformNameList[memberNameDotSubmember] =
                   uboDotMemberNameDotSubmemberName;
@@ -988,26 +976,20 @@ const MslProgram::InputMap &MslProgram::updateUniformsList() {
       }
     }
 
-    if (_psoReflection->fragmentArguments()
-            ->object<MTLArgument>(argIdx)
-            ->type() == MTLArgumentTypeTexture) {
-      if (HW::ENV_RADIANCE != _psoReflection->fragmentArguments()
-                                  ->object<MTLArgument>(argIdx)
-                                  ->name()
-                                  ->utf8String() &&
-          HW::ENV_IRRADIANCE != _psoReflection->fragmentArguments()
-                                    ->object<MTLArgument>(argIdx)
-                                    ->name()
-                                    ->utf8String()) {
-        std::string texture_name = _psoReflection->fragmentArguments()
-                                       ->object<MTLArgument>(argIdx)
-                                       ->name()
-                                       ->utf8String();
-        InputPtr inputPtr =
-            std::make_shared<Input>(_psoReflection->fragmentArguments()
-                                        ->object<MTLArgument>(argIdx)
-                                        ->index(),
-                                    58, -1, EMPTY_STRING);
+    if ([[_psoReflection fragmentArguments] objectAtIndex:(argIdx)].type ==
+        MTLArgumentTypeTexture) {
+      if (HW::ENV_RADIANCE !=
+              [[_psoReflection fragmentArguments] objectAtIndex:(argIdx)]
+                  .name.UTF8String &&
+          HW::ENV_IRRADIANCE !=
+              [[_psoReflection fragmentArguments] objectAtIndex:(argIdx)]
+                  .name.UTF8String) {
+        std::string texture_name =
+            [[_psoReflection fragmentArguments] objectAtIndex:(argIdx)]
+                .name.UTF8String;
+        InputPtr inputPtr = std::make_shared<Input>(
+            [[_psoReflection fragmentArguments] objectAtIndex:(argIdx)].index,
+            58, -1, EMPTY_STRING);
         _uniformList[texture_name] = inputPtr;
       }
     }
@@ -1136,9 +1118,9 @@ const MslProgram::InputMap &MslProgram::updateUniformsList() {
   return _uniformList;
 }
 
-void MslProgram::bindUniformBuffers(MTLRenderCommandEncoder *renderCmdEncoder,
-                                    LightHandlerPtr lightHandler,
-                                    CameraPtr cam) {
+void MslProgram::bindUniformBuffers(
+    id<MTLRenderCommandEncoder> renderCmdEncoder, LightHandlerPtr lightHandler,
+    CameraPtr cam) {
   auto setCommonUniform = [this](LightHandlerPtr lightHandler, CameraPtr cam,
                                  std::string uniformName,
                                  std::vector<unsigned char> &data,
@@ -1302,149 +1284,120 @@ void MslProgram::bindUniformBuffers(MTLRenderCommandEncoder *renderCmdEncoder,
     }
   };
 
-  for (NS::UInteger argIdx = 0;
-       argIdx < _psoReflection->vertexArguments()->count(); argIdx++) {
-    if (_psoReflection->vertexArguments()
-                ->object<MTLArgument>(argIdx)
-                ->type() == MTLArgumentTypeBuffer &&
-        _psoReflection->vertexArguments()
-                ->object<MTLArgument>(argIdx)
-                ->bufferDataType() == MTLDataTypeStruct) {
+  for (NSUInteger argIdx = 0; argIdx < [_psoReflection vertexArguments].count;
+       argIdx++) {
+    if ([[_psoReflection vertexArguments] objectAtIndex:(argIdx)].type ==
+            MTLArgumentTypeBuffer &&
+        [[_psoReflection vertexArguments] objectAtIndex:(argIdx)]
+                .bufferDataType == MTLDataTypeStruct) {
       std::vector<unsigned char> uniformBufferData(
-          _psoReflection->vertexArguments()
-              ->object<MTLArgument>(argIdx)
-              ->bufferDataSize());
-      for (NS::UInteger memberIdx = 0;
-           memberIdx < _psoReflection->vertexArguments()
-                           ->object<MTLStructMember>(argIdx)
-                           ->structType()
-                           ->members()
-                           ->count();
+          [[_psoReflection vertexArguments] objectAtIndex:(argIdx)]
+              .bufferDataSize);
+      for (NSUInteger memberIdx = 0;
+           memberIdx < [[_psoReflection vertexArguments] objectAtIndex:(argIdx)]
+                           .bufferStructType.members.count;
            memberIdx++) {
-        if (!setCommonUniform(lightHandler, cam,
-                              _psoReflection->vertexArguments()
-                                  ->object<MTLStructMember>(argIdx)
-                                  ->name()
-                                  ->utf8String(),
-                              uniformBufferData,
-                              _psoReflection->vertexArguments()
-                                  ->object<MTLStructMember>(argIdx)
-                                  ->offset())) {
+        if (!setCommonUniform(
+                lightHandler, cam,
+                [[_psoReflection vertexArguments] objectAtIndex:(argIdx)]
+                    .name.UTF8String,
+                uniformBufferData,
+                [[_psoReflection vertexArguments] objectAtIndex:(argIdx)]
+                    .bufferAlignment)) {
           MaterialX::ValuePtr value =
-              _uniformList[string(_psoReflection->vertexArguments()
-                                      ->object<MTLArgument>(argIdx)
-                                      ->name()
-                                      ->utf8String()) +
+              _uniformList[string([[_psoReflection vertexArguments]
+                                      objectAtIndex:(argIdx)]
+                                      .name.UTF8String) +
                            "." +
-                           _psoReflection->vertexArguments()
-                               ->object<MTLStructMember>(argIdx)
-                               ->name()
-                               ->utf8String()]
+                           [[_psoReflection vertexArguments]
+                               objectAtIndex:(argIdx)]
+                               .name.UTF8String]
                   ->value;
           if (value) {
             setValue(value, uniformBufferData,
-                     _psoReflection->vertexArguments()
-                         ->object<MTLStructMember>(argIdx)
-                         ->offset());
+                     [[_psoReflection vertexArguments] objectAtIndex:(argIdx)]
+                         .bufferAlignment);
           }
         }
       }
 
-      if (_psoReflection->vertexArguments()
-              ->object<MTLArgument>(argIdx)
-              ->bufferStructType())
-        renderCmdEncoder->setVertexBytes((void *)uniformBufferData.data(),
-                                         _psoReflection->vertexArguments()
-                                             ->object<MTLArgument>(argIdx)
-                                             ->bufferDataSize(),
-                                         _psoReflection->vertexArguments()
-                                             ->object<MTLArgument>(argIdx)
-                                             ->index());
+      if ([[_psoReflection vertexArguments] objectAtIndex:(argIdx)]
+              .bufferStructType)
+        [renderCmdEncoder setVertexBytes:(void *)uniformBufferData.data()
+                                  length:[[_psoReflection vertexArguments]
+                                             objectAtIndex:(argIdx)]
+                                             .bufferDataSize
+                                 atIndex:[[_psoReflection vertexArguments]
+                                             objectAtIndex:(argIdx)]
+                                             .index];
     }
   }
 
-  for (NS::UInteger argIdx = 0;
-       argIdx < _psoReflection->fragmentArguments()->count(); argIdx++) {
-    if (_psoReflection->fragmentArguments()
-                ->object<MTLArgument>(argIdx)
-                ->type() == MTLArgumentTypeBuffer &&
-        _psoReflection->fragmentArguments()
-                ->object<MTLArgument>(argIdx)
-                ->bufferDataType() == MTLDataTypeStruct) {
+  for (NSUInteger argIdx = 0; argIdx < [_psoReflection fragmentArguments].count;
+       argIdx++) {
+    if ([[_psoReflection fragmentArguments] objectAtIndex:(argIdx)].type ==
+            MTLArgumentTypeBuffer &&
+        [[_psoReflection fragmentArguments] objectAtIndex:(argIdx)]
+                .bufferDataType == MTLDataTypeStruct) {
       std::vector<unsigned char> uniformBufferData(
-          _psoReflection->fragmentArguments()
-              ->object<MTLArgument>(argIdx)
-              ->bufferDataSize());
+          [[_psoReflection fragmentArguments] objectAtIndex:(argIdx)]
+              .bufferDataSize);
 
-      for (NS::UInteger memberIdx = 0;
-           memberIdx < _psoReflection->fragmentArguments()
-                           ->object<MTLStructMember>(argIdx)
-                           ->structType()
-                           ->members()
-                           ->count();
+      for (NSUInteger memberIdx = 0;
+           memberIdx < [[_psoReflection fragmentArguments]
+                           objectAtIndex:(argIdx)]
+                           .bufferStructType.members.count;
            memberIdx++) {
-        string uniformName = string(_psoReflection->fragmentArguments()
-                                        ->object<MTLArgument>(argIdx)
-                                        ->name()
-                                        ->utf8String()) +
-                             "." +
-                             _psoReflection->fragmentArguments()
-                                 ->object<MTLStructMember>(argIdx)
-                                 ->name()
-                                 ->utf8String();
+        string uniformName =
+            string([[_psoReflection fragmentArguments] objectAtIndex:(argIdx)]
+                       .name.UTF8String) +
+            "." +
+            [[_psoReflection fragmentArguments] objectAtIndex:(argIdx)]
+                .name.UTF8String;
 
-        if (!setCommonUniform(lightHandler, cam,
-                              _psoReflection->fragmentArguments()
-                                  ->object<MTLStructMember>(argIdx)
-                                  ->name()
-                                  ->utf8String(),
-                              uniformBufferData,
-                              _psoReflection->fragmentArguments()
-                                  ->object<MTLStructMember>(argIdx)
-                                  ->offset())) {
+        if (!setCommonUniform(
+                lightHandler, cam,
+                [[_psoReflection fragmentArguments] objectAtIndex:(argIdx)]
+                    .name.UTF8String,
+                uniformBufferData,
+                [[_psoReflection fragmentArguments] objectAtIndex:(argIdx)]
+                    .bufferAlignment)) {
           auto uniformInfo = _uniformList.find(uniformName);
           if (uniformInfo != _uniformList.end()) {
             MaterialX::ValuePtr value = uniformInfo->second->value;
             if (value) {
-              setValue(value, uniformBufferData,
-                       _psoReflection->fragmentArguments()
-                           ->object<MTLStructMember>(argIdx)
-                           ->offset());
+              setValue(
+                  value, uniformBufferData,
+                  [[_psoReflection fragmentArguments] objectAtIndex:(argIdx)]
+                      .bufferAlignment);
             }
           } else {
           }
         }
 
-        if (MTLArrayType *arrayMember =
-                _psoReflection->fragmentArguments()
-                    ->object<MTLStructMember>(argIdx)
-                    ->arrayType()) {
-          for (int i = 0; i < arrayMember->arrayLength(); ++i) {
-            for (NS::UInteger memberIdx = 0;
-                 memberIdx <
-                 arrayMember->elementStructType()->members()->count();
+        if (MTLArgument *arrayMember =
+                [[_psoReflection fragmentArguments] objectAtIndex:(argIdx)]) {
+          for (int i = 0; i < arrayMember.arrayLength; ++i) {
+            for (NSUInteger memberIdx = 0;
+                 memberIdx < [arrayMember bufferStructType].members.count;
                  memberIdx++) {
-              string uniformNameSubArray =
-                  uniformName + "[" + std::to_string(i) + "]." +
-                  arrayMember->elementStructType()
-                      ->members()
-                      ->object<MTLStructMember>(memberIdx)
-                      ->name()
-                      ->utf8String();
+              string uniformNameSubArray = uniformName + "[" +
+                                           std::to_string(i) + "]." +
+                                           [arrayMember bufferStructType]
+                                               .members[memberIdx]
+                                               .name.UTF8String;
 
               auto uniformInfo = _uniformList.find(uniformNameSubArray);
               if (uniformInfo != _uniformList.end()) {
                 MaterialX::ValuePtr value = uniformInfo->second->value;
                 if (value) {
                   setValue(value, uniformBufferData,
-                           _psoReflection->fragmentArguments()
-                                   ->object<MTLStructMember>(argIdx)
-                                   ->offset() +
-                               i * arrayMember->stride() +
-                               arrayMember->elementStructType()
-                                   ->members()
-                                   ->object<MTLStructMember>(memberIdx)
-                                   ->offset());
+                           [[_psoReflection fragmentArguments]
+                               objectAtIndex:(argIdx)]
+                                   .bufferAlignment +
+                               i * arrayMember.bufferDataSize +
+                               arrayMember.bufferStructType.members[memberIdx]
+                                   .offset);
                 }
               }
             }
@@ -1452,28 +1405,31 @@ void MslProgram::bindUniformBuffers(MTLRenderCommandEncoder *renderCmdEncoder,
         }
       }
 
-      if (_psoReflection->vertexArguments()
-              ->object<MTLArgument>(argIdx)
-              ->bufferStructType())
-        renderCmdEncoder->setFragmentBytes((void *)uniformBufferData.data(),
-                                           _psoReflection->vertexArguments()
-                                               ->object<MTLArgument>(argIdx)
-                                               ->bufferDataSize(),
-                                           _psoReflection->vertexArguments()
-                                               ->object<MTLArgument>(argIdx)
-                                               ->index());
+      if ([[_psoReflection vertexArguments] objectAtIndex:(argIdx)]
+              .bufferStructType)
+        [renderCmdEncoder setFragmentBytes:(void *)uniformBufferData.data()
+                                    length:[[_psoReflection vertexArguments]
+                                               objectAtIndex:(argIdx)]
+                                               .bufferDataSize
+                                   atIndex:[[_psoReflection vertexArguments]
+                                               objectAtIndex:(argIdx)]
+                                               .index];
     }
   }
 }
 
 void MslProgram::reset() {
   if (_pso != nil) {
-    _pso->release();
+#if !__has_feature(objc_arc)
+    [_pso release];
+#endif // !__has_feature(objc_arc)
   }
   _pso = nil;
 
   if (_psoReflection != nil) {
-    _psoReflection->release();
+#if !__has_feature(objc_arc)
+    [_psoReflection release];
+#endif // !__has_feature(objc_arc)
   }
   _psoReflection = nil;
 

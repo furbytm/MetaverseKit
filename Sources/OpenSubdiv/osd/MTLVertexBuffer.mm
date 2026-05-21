@@ -23,7 +23,7 @@
 //
 
 #include "OpenSubdiv/OSDSurfaceMTLVertexBuffer.h"
-#include <Metal/Metal.h>
+#import <Metal/Metal.h>
 #include <TargetConditionals.h>
 
 namespace OpenSubdiv {

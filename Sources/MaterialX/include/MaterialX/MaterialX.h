@@ -142,8 +142,8 @@
 #include <MaterialX/MXGenMslUnlitSurfaceNodeMsl.h>
 #endif /* defined(__APPLE__) */
 #include <MaterialX/MXGenMslExport.h>
-#include <MaterialX/MXGenMslShaderGenerator.h>
 #include <MaterialX/MXGenMslResourceBindingContext.h>
+#include <MaterialX/MXGenMslShaderGenerator.h>
 #include <MaterialX/MXGenMslSurfaceNodeMsl.h>
 #include <MaterialX/MXGenMslSyntax.h>
 #include <MaterialX/MXGenShader.h>
@@ -193,13 +193,13 @@
 #include <MaterialX/MXRenderGlslGlslProgram.h>
 
 #if defined(__APPLE__)
-# include <MaterialX/MXRenderMslMetalTextureHandler.h>
-# include <MaterialX/MXRenderMslRenderer.h>
-# include <MaterialX/MXRenderMslTextureBaker.h>
+#include <MaterialX/MXRenderMslMetalTextureHandler.h>
+#include <MaterialX/MXRenderMslRenderer.h>
+#include <MaterialX/MXRenderMslTextureBaker.h>
 #else /* defined(__APPLE__) */
-# include <MaterialX/MXRenderGlslGLTextureHandler.h>
-# include <MaterialX/MXRenderGlslGlslRenderer.h>
-# include <MaterialX/MXRenderGlslTextureBaker.h>
+#include <MaterialX/MXRenderGlslGLTextureHandler.h>
+#include <MaterialX/MXRenderGlslGlslRenderer.h>
+#include <MaterialX/MXRenderGlslTextureBaker.h>
 #endif /* !defined(__APPLE__) */
 
 #include <MaterialX/MXRenderOslExport.h>

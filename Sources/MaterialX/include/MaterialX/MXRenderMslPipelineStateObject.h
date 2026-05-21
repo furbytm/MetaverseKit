@@ -18,7 +18,7 @@
 
 #include <MaterialX/MXGenShader.h>
 
-#include <Metal/Metal.hpp>
+#import <Metal/Metal.h>
 
 MATERIALX_NAMESPACE_BEGIN
 
@@ -73,8 +73,8 @@ public:
   /// An exception is thrown if the program cannot be created.
   /// The exception will contain a list of program creation errors.
   /// @return Pipeline State Object identifier.
-  MTL::RenderPipelineState *build(MTL::Device *device,
-                                  MetalFramebufferPtr frameBuffer);
+  id<MTLRenderPipelineState> build(id<MTLDevice> device,
+                                   MetalFramebufferPtr frameBuffer);
 
   /// Structure to hold information about program inputs.
   /// The structure is populated by directly scanning the program so may not
@@ -145,7 +145,7 @@ public:
   /// Bind the pipeline state object to the command encoder.
   /// @param renderCmdEncoder encoder that binds the pipeline state object.
   /// @return False if failed
-  bool bind(MTL::RenderCommandEncoder *renderCmdEncoder);
+  bool bind(id<MTLRenderCommandEncoder> renderCmdEncoder);
 
   /// Bind inputs
   ///  @param renderCmdEncoder encoder that inputs will be bound to.
@@ -154,7 +154,7 @@ public:
   ///  @param imageHandler
   ///  @param lightHandler
   ///  @return void - No return value
-  void prepareUsedResources(MTL::RenderCommandEncoder *renderCmdEncoder,
+  void prepareUsedResources(id<MTLRenderCommandEncoder> renderCmdEncoder,
                             CameraPtr cam, GeometryHandlerPtr geometryHandler,
                             ImageHandlerPtr imageHandler,
                             LightHandlerPtr lightHandler);
@@ -173,17 +173,17 @@ public:
   /// being bind to
   /// @param inputs Attribute inputs to bind to
   /// @param mesh Mesh containing streams to bind
-  void bindAttribute(MTL::RenderCommandEncoder *renderCmdEncoder,
+  void bindAttribute(id<MTLRenderCommandEncoder> renderCmdEncoder,
                      const MslProgram::InputMap &inputs, MeshPtr mesh);
 
   /// Bind input geometry partition (indexing)
   void bindPartition(MeshPartitionPtr partition);
 
   /// Bind input geometry streams
-  void bindMesh(MTL::RenderCommandEncoder *renderCmdEncoder, MeshPtr mesh);
+  void bindMesh(id<MTLRenderCommandEncoder> renderCmdEncoder, MeshPtr mesh);
 
   /// Queries the index buffer assinged to a mesh partition
-  MTL::Buffer *getIndexBuffer(MeshPartitionPtr mesh) {
+  id<MTLBuffer> getIndexBuffer(MeshPartitionPtr mesh) {
     if (_indexBufferIds.find(mesh) != _indexBufferIds.end())
       return _indexBufferIds[mesh];
     return nil;
@@ -193,7 +193,7 @@ public:
   void unbindGeometry();
 
   /// Bind any input textures
-  void bindTextures(MTL::RenderCommandEncoder *renderCmdEncoder,
+  void bindTextures(id<MTLRenderCommandEncoder> renderCmdEncoder,
                     LightHandlerPtr lightHandler, ImageHandlerPtr imageHandler);
 
   void bindTexture(ImageHandlerPtr imageHandler, string shaderTextureName,
@@ -251,24 +251,24 @@ protected:
                             const InputMap &uniformList);
 
   // Bind an individual texture to a program uniform location
-  ImagePtr bindTexture(MTL::RenderCommandEncoder *renderCmdEncoder,
+  ImagePtr bindTexture(id<MTLRenderCommandEncoder> renderCmdEncoder,
                        unsigned int uniformLocation, const FilePath &filePath,
                        ImageSamplingProperties samplingProperties,
                        ImageHandlerPtr imageHandler);
 
   // Bind an individual texture to a program uniform location
-  ImagePtr bindTexture(MTL::RenderCommandEncoder *renderCmdEncoder,
+  ImagePtr bindTexture(id<MTLRenderCommandEncoder> renderCmdEncoder,
                        unsigned int uniformLocation, ImagePtr imagePtr,
                        ImageHandlerPtr imageHandler);
 
-  void bindUniformBuffers(MTL::RenderCommandEncoder *renderCmdEncoder,
+  void bindUniformBuffers(id<MTLRenderCommandEncoder> renderCmdEncoder,
                           LightHandlerPtr lightHandler, CameraPtr camera);
 
   // Delete any currently created pso
   void reset();
 
   // Utility to map a MaterialX type to an METAL type
-  static MTL::DataType mapTypeToMetalType(const TypeDesc *type);
+  static MTLDataType mapTypeToMetalType(const TypeDesc *type);
 
 private:
   // Stages used to create program
@@ -277,8 +277,8 @@ private:
 
   // Generated pipeline state object. A non-zero number indicates a valid shader
   // program.
-  MTL::RenderPipelineState *_pso = nil;
-  MTL::RenderPipelineReflection *_psoReflection = nil;
+  id<MTLRenderPipelineState> _pso = nil;
+  MTLRenderPipelineReflection *_psoReflection = nil;
 
   // List of program input uniforms
   InputMap _uniformList;
@@ -293,16 +293,16 @@ private:
 
   // Attribute buffer resource handles
   // for each attribute identifier in the program
-  std::unordered_map<string, MTL::Buffer *> _attributeBufferIds;
+  std::unordered_map<string, id<MTLBuffer>> _attributeBufferIds;
 
   // Attribute indexing buffer handle
-  std::map<MeshPartitionPtr, MTL::Buffer *> _indexBufferIds;
+  std::map<MeshPartitionPtr, id<MTLBuffer>> _indexBufferIds;
 
   // Program texture map
   std::unordered_map<string, unsigned int> _programTextures;
 
   // Metal Device Object
-  MTL::Device *_device = nil;
+  id<MTLDevice> _device = nil;
 
   // Currently bound mesh
   MeshPtr _boundMesh = nullptr;

@@ -309,12 +309,13 @@ static void stbi__stdio_write(void *context, void *data, int size) {
 #else
 #define STBIW_EXTERN extern
 #endif
-STBIW_EXTERN __declspec(dllimport) int __stdcall MultiByteToWideChar(
-    unsigned int cp, unsigned long flags, const char *str, int cbmb,
-    wchar_t *widestr, int cchwide);
-STBIW_EXTERN __declspec(dllimport) int __stdcall WideCharToMultiByte(
-    unsigned int cp, unsigned long flags, const wchar_t *widestr, int cchwide,
-    char *str, int cbmb, const char *defchar, int *used_default);
+STBIW_EXTERN __declspec(dllimport) int __stdcall
+MultiByteToWideChar(unsigned int cp, unsigned long flags, const char *str,
+                    int cbmb, wchar_t *widestr, int cchwide);
+STBIW_EXTERN __declspec(dllimport) int __stdcall
+WideCharToMultiByte(unsigned int cp, unsigned long flags,
+                    const wchar_t *widestr, int cchwide, char *str, int cbmb,
+                    const char *defchar, int *used_default);
 
 STBIWDEF int stbiw_convert_wchar_to_utf8(char *buffer, size_t bufferlen,
                                          const wchar_t *input) {
@@ -833,7 +834,7 @@ STBIWDEF int stbi_write_hdr(char const *filename, int x, int y, int comp,
 #ifndef STBIW_ZLIB_COMPRESS
 // stretchy buffer; stbiw__sbpush() == vector<>::push_back() -- stbiw__sbcount()
 // == vector<>::size()
-#define stbiw__sbraw(a) ((int *)(a)-2)
+#define stbiw__sbraw(a) ((int *)(a) - 2)
 #define stbiw__sbm(a) stbiw__sbraw(a)[0]
 #define stbiw__sbn(a) stbiw__sbraw(a)[1]
 
@@ -909,9 +910,9 @@ static unsigned int stbiw__zhash(unsigned char *data) {
 #define stbiw__zlib_huffa(b, c) stbiw__zlib_add(stbiw__zlib_bitrev(b, c), c)
 // default huffman tables
 #define stbiw__zlib_huff1(n) stbiw__zlib_huffa(0x30 + (n), 8)
-#define stbiw__zlib_huff2(n) stbiw__zlib_huffa(0x190 + (n)-144, 9)
-#define stbiw__zlib_huff3(n) stbiw__zlib_huffa(0 + (n)-256, 7)
-#define stbiw__zlib_huff4(n) stbiw__zlib_huffa(0xc0 + (n)-280, 8)
+#define stbiw__zlib_huff2(n) stbiw__zlib_huffa(0x190 + (n) - 144, 9)
+#define stbiw__zlib_huff3(n) stbiw__zlib_huffa(0 + (n) - 256, 7)
+#define stbiw__zlib_huff4(n) stbiw__zlib_huffa(0xc0 + (n) - 280, 8)
 #define stbiw__zlib_huff(n)                                                    \
   ((n) <= 143   ? stbiw__zlib_huff1(n)                                         \
    : (n) <= 255 ? stbiw__zlib_huff2(n)                                         \

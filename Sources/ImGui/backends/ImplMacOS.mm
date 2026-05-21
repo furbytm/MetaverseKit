@@ -29,17 +29,17 @@
 #ifndef IMGUI_DISABLE
 #import "ImplMacOS.h"
 #if !TARGET_OS_IPHONE
-# import <Carbon/Carbon.h>
+#import <Carbon/Carbon.h>
 #else /* TARGET_OS_IPHONE */
-# include <CoreFoundation/CFCGTypes.h>
-# include <CoreFoundation/CFBundle.h>
+#include <CoreFoundation/CFBundle.h>
+#include <CoreFoundation/CFCGTypes.h>
 #endif /* !TARGET_OS_IPHONE */
-# if !TARGET_OS_IPHONE
-#  import <Cocoa/Cocoa.h>
-# else /* TARGET_OS_IPHONE */
-#  import <UIKit/UIKit.h>
-#  import <Foundation/Foundation.h>
-# endif /* !TARGET_OS_IPHONE */
+#if !TARGET_OS_IPHONE
+#import <Cocoa/Cocoa.h>
+#else /* TARGET_OS_IPHONE */
+#import <Foundation/Foundation.h>
+#import <UIKit/UIKit.h>
+#endif /* !TARGET_OS_IPHONE */
 #import <GameController/GameController.h>
 #import <time.h>
 
@@ -118,7 +118,7 @@ struct ImGui_ImplOSX_Data {
   KeyEventResponder *KeyEventResponder;
 #if !TARGET_OS_IPHONE
   NSTextInputContext *InputContext;
-#else /* TARGET_OS_IPHONE */
+#else  /* TARGET_OS_IPHONE */
   UITextInputContext *InputContext;
 #endif /* !TARGET_OS_IPHONE */
   id Monitor;
@@ -521,7 +521,7 @@ static ImGuiKey ImGui_ImplOSX_KeyCodeToImGuiKey(int key_code) {
   default:
     return ImGuiKey_None;
   }
-#else /* TARGET_OS_IPHONE */
+#else  /* TARGET_OS_IPHONE */
   return ImGuiKey_None;
 #endif /* !TARGET_OS_IPHONE */
 }
@@ -727,7 +727,9 @@ static void ImGui_ImplOSX_UpdateGamepads() {
 // Update gamepad inputs
 #define IM_SATURATE(V) (V < 0.0f ? 0.0f : V > 1.0f ? 1.0f : V)
 #define MAP_BUTTON(KEY_NO, BUTTON_NAME)                                        \
-  { io.AddKeyEvent(KEY_NO, gp.BUTTON_NAME.isPressed); }
+  {                                                                            \
+    io.AddKeyEvent(KEY_NO, gp.BUTTON_NAME.isPressed);                          \
+  }
 #define MAP_ANALOG(KEY_NO, AXIS_NAME, V0, V1)                                  \
   {                                                                            \
     float vn = (float)(gp.AXIS_NAME.value - V0) / (float)(V1 - V0);            \
@@ -833,14 +835,14 @@ static ImGuiMouseSource GetMouseSource(NSEvent *event) {
   default:
     return ImGuiMouseSource_Mouse;
   }
-#else /* TARGET_OS_IPHONE */
-    return ImGuiMouseSource_TouchScreen;
+#else  /* TARGET_OS_IPHONE */
+  return ImGuiMouseSource_TouchScreen;
 #endif /* !TARGET_OS_IPHONE */
 }
 
 static bool ImGui_ImplOSX_HandleEvent(NSEvent *event, NSView *view) {
 #if !TARGET_OS_IPHONE
-  
+
   ImGuiIO &io = ImGui::GetIO();
 
   if (event.type == NSEventTypeLeftMouseDown ||
