@@ -27,8 +27,8 @@
 #endif
 
 #ifndef PUGIXML_NO_XPATH
-#include <math.h>
 #include <float.h>
+#include <math.h>
 #endif
 
 #ifndef PUGIXML_NO_STL
@@ -43,8 +43,8 @@
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable : 4127) // conditional expression is constant
-#pragma warning(                                                               \
-    disable : 4324) // structure was padded due to __declspec(align())
+#pragma warning(disable                                                        \
+                : 4324) // structure was padded due to __declspec(align())
 #pragma warning(disable : 4702) // unreachable code
 #pragma warning(disable : 4996) // this function or variable may be unsafe
 #endif
@@ -59,8 +59,8 @@
 #pragma warning(disable : 177) // function was declared but never referenced
 #pragma warning(disable : 279) // controlling expression is constant
 #pragma warning(disable : 1478 1786) // function was declared "deprecated"
-#pragma warning(                                                               \
-    disable : 1684) // conversion from pointer to same-sized integral type
+#pragma warning(disable                                                        \
+                : 1684) // conversion from pointer to same-sized integral type
 #endif
 
 #if defined(__BORLANDC__) && defined(PUGIXML_HEADER_ONLY)
@@ -2608,7 +2608,9 @@ PUGI__FN char_t *strconv_escape(char_t *s, gap &g) {
       PUGI__THROW_ERROR(status_out_of_memory, s);                              \
   }
 #define PUGI__POPNODE()                                                        \
-  { cursor = cursor->parent; }
+  {                                                                            \
+    cursor = cursor->parent;                                                   \
+  }
 #define PUGI__SCANFOR(X)                                                       \
   {                                                                            \
     while (*s != 0 && !(X))                                                    \
@@ -8373,7 +8375,7 @@ PUGI__FN double convert_string_to_number(const char_t *string) {
   if (!check_string_to_number_format(string))
     return gen_nan();
 
-    // parse string
+  // parse string
 #ifdef PUGIXML_WCHAR_MODE
   return wcstod(string, 0);
 #else
@@ -11804,8 +11806,9 @@ struct xpath_parser {
   //					| AdditiveExpr '-' MultiplicativeExpr
   // MultiplicativeExpr ::= UnaryExpr
   //						  | MultiplicativeExpr '*'
-  //UnaryExpr 						  | MultiplicativeExpr 'div' UnaryExpr 						  | MultiplicativeExpr 'mod'
-  //UnaryExpr
+  // UnaryExpr 						  | MultiplicativeExpr
+  // 'div' UnaryExpr 						  |
+  // MultiplicativeExpr 'mod' UnaryExpr
   xpath_ast_node *parse_expression(int limit = 0) {
     xpath_ast_node *n = parse_path_or_unary_expression();
     if (!n)

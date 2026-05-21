@@ -13,12 +13,13 @@
 extern "C" {
 #endif
 
-void* NSUtilGetView(void* pWindow);
-void* NSUtilCreateWindow(unsigned int width, unsigned int height, const char* title, bool batchMode);
-void NSUtilShowWindow(void* pWindow);
-void NSUtilHideWindow(void* pWindow);
-void NSUtilSetFocus(void* pWindow);
-void NSUtilDisposeWindow(void* pWindow);
+void *NSUtilGetView(void *pWindow);
+void *NSUtilCreateWindow(unsigned int width, unsigned int height,
+                         const char *title, bool batchMode);
+void NSUtilShowWindow(void *pWindow);
+void NSUtilHideWindow(void *pWindow);
+void NSUtilSetFocus(void *pWindow);
+void NSUtilDisposeWindow(void *pWindow);
 
 #ifdef __cplusplus
 }

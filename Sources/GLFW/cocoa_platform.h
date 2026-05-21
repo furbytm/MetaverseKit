@@ -42,8 +42,8 @@
 # if !TARGET_OS_IPHONE
 #  import <Cocoa/Cocoa.h>
 # else /* TARGET_OS_IPHONE */
-#  import <UIKit/UIKit.h>
-#  import <Foundation/Foundation.h>
+@import UIKit;
+@import Foundation;
 # endif /* !TARGET_OS_IPHONE */
 #else /* !defined(__OBJC__) */
 typedef void* id;

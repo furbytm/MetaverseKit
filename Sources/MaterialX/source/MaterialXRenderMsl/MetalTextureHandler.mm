@@ -33,41 +33,41 @@ bool MetalTextureHandler::bindImage(
   return true;
 }
 
-MTLSamplerState *MetalTextureHandler::getSamplerState(
+id<MTLSamplerState> MetalTextureHandler::getSamplerState(
     const ImageSamplingProperties &samplingProperties) {
   if (_imageSamplerStateMap.find(samplingProperties) ==
       _imageSamplerStateMap.end()) {
-    MTLSamplerDescriptor *samplerDesc =
-        MTLSamplerDescriptor::alloc()->init();
-    samplerDesc->setSAddressMode(
-        mapAddressModeToMetal(samplingProperties.uaddressMode));
-    samplerDesc->setRAddressMode(
-        mapAddressModeToMetal(samplingProperties.uaddressMode));
-    samplerDesc->setTAddressMode(
-        mapAddressModeToMetal(samplingProperties.vaddressMode));
-    samplerDesc->setBorderColor(samplingProperties.defaultColor[0] == 0
+    MTLSamplerDescriptor *samplerDesc = [[MTLSamplerDescriptor alloc] init];
+    [samplerDesc
+        setSAddressMode:mapAddressModeToMetal(samplingProperties.uaddressMode)];
+    [samplerDesc
+        setRAddressMode:mapAddressModeToMetal(samplingProperties.uaddressMode)];
+    [samplerDesc
+        setTAddressMode:mapAddressModeToMetal(samplingProperties.vaddressMode)];
+    [samplerDesc setBorderColor:samplingProperties.defaultColor[0] == 0
                                     ? MTLSamplerBorderColorOpaqueBlack
-                                    : MTLSamplerBorderColorOpaqueWhite);
+                                    : MTLSamplerBorderColorOpaqueWhite];
     MTLSamplerMinMagFilter minmagFilter;
     MTLSamplerMipFilter mipFilter;
     mapFilterTypeToMetal(samplingProperties.filterType,
                          samplingProperties.enableMipmaps, minmagFilter,
                          mipFilter);
     // Magnification filters are more restrictive than minification
-    samplerDesc->setMagFilter(MTLSamplerMinMagFilterLinear);
-    samplerDesc->setMinFilter(minmagFilter);
-    samplerDesc->setMipFilter(mipFilter);
-    samplerDesc->setMaxAnisotropy(16);
+    [samplerDesc setMagFilter:MTLSamplerMinMagFilterLinear];
+    [samplerDesc setMinFilter:minmagFilter];
+    [samplerDesc setMipFilter:mipFilter];
+    [samplerDesc setMaxAnisotropy:16];
 
     _imageSamplerStateMap[samplingProperties] =
-        _device->newSamplerState(samplerDesc);
+        [_device newSamplerStateWithDescriptor:samplerDesc];
   }
 
   return _imageSamplerStateMap[samplingProperties];
 }
 
-bool MetalTextureHandler::bindImage(MTLRenderCommandEncoder *renderCmdEncoder,
-                                    int textureUnit, ImagePtr image) {
+bool MetalTextureHandler::bindImage(
+    id<MTLRenderCommandEncoder> renderCmdEncoder, int textureUnit,
+    ImagePtr image) {
   // Create renderer resources if needed.
   if (image->getResourceId() == MslProgram::UNDEFINED_METAL_RESOURCE_ID) {
     if (!createRenderResources(image, true)) {
@@ -77,16 +77,18 @@ bool MetalTextureHandler::bindImage(MTLRenderCommandEncoder *renderCmdEncoder,
 
   _boundTextureLocations[textureUnit] = image->getResourceId();
 
-  renderCmdEncoder->setFragmentTexture(_metalTextureMap[image->getResourceId()],
-                                       textureUnit);
-  renderCmdEncoder->setFragmentSamplerState(
-      getSamplerState(_imageBindingInfo[image->getResourceId()].second),
-      textureUnit);
+  [renderCmdEncoder setFragmentTexture:_metalTextureMap[image->getResourceId()]
+                               atIndex:textureUnit];
+  [renderCmdEncoder
+      setFragmentSamplerState:getSamplerState(
+                                  _imageBindingInfo[image->getResourceId()]
+                                      .second)
+                      atIndex:textureUnit];
 
   return true;
 }
 
-MTLTexture *MetalTextureHandler::getAssociatedMetalTexture(ImagePtr image) {
+id<MTLTexture> MetalTextureHandler::getAssociatedMetalTexture(ImagePtr image) {
   if (image) {
     auto tex = _metalTextureMap.find(image->getResourceId());
     if (tex != _metalTextureMap.end())
@@ -95,7 +97,7 @@ MTLTexture *MetalTextureHandler::getAssociatedMetalTexture(ImagePtr image) {
   return nil;
 }
 
-MTLTexture *
+id<MTLTexture>
 MetalTextureHandler::getMTLTextureForImage(unsigned int index) const {
   auto imageInfo = _imageBindingInfo.find(index);
   if (imageInfo != _imageBindingInfo.end()) {
@@ -111,7 +113,7 @@ MetalTextureHandler::getMTLTextureForImage(unsigned int index) const {
   return nil;
 }
 
-MTLSamplerState *
+id<MTLSamplerState>
 MetalTextureHandler::getMTLSamplerStateForImage(unsigned int index) {
   auto imageInfo = _imageBindingInfo.find(index);
   if (imageInfo != _imageBindingInfo.end()) {
@@ -134,7 +136,7 @@ bool MetalTextureHandler::unbindImage(ImagePtr image) {
 
 bool MetalTextureHandler::createRenderResources(ImagePtr image,
                                                 bool generateMipMaps) {
-  MTLTexture *texture = nil;
+  id<MTLTexture> texture = nil;
 
   MTLPixelFormat pixelFormat;
   MTLDataType dataType;
@@ -146,29 +148,30 @@ bool MetalTextureHandler::createRenderResources(ImagePtr image,
     mapTextureFormatToMetal(image->getBaseType(), image->getChannelCount(),
                             false, dataType, pixelFormat);
 
-    MTLTextureDescriptor *texDesc = MTLTextureDescriptor::alloc()->init();
-    texDesc->setTextureType(MTLTextureType2D);
-    texDesc->setWidth(image->getWidth());
-    texDesc->setHeight(image->getHeight());
-    texDesc->setMipmapLevelCount(generateMipMaps ? image->getMaxMipCount() : 1);
-    texDesc->setUsage(MTLTextureUsageShaderRead |
+    MTLTextureDescriptor *texDesc = [MTLTextureDescriptor
+        texture2DDescriptorWithPixelFormat:pixelFormat
+                                     width:image->getWidth()
+                                    height:image->getHeight()
+                                 mipmapped:generateMipMaps ? YES : NO];
+
+    [texDesc setMipmapLevelCount:generateMipMaps ? image->getMaxMipCount() : 1];
+    [texDesc setUsage:MTLTextureUsageShaderRead |
                       // For now, we set generate mip maps flag off,
                       // when we want to use the texture as render target
-                      (!generateMipMaps ? MTLTextureUsageRenderTarget : 0));
-    texDesc->setResourceOptions(MTLResourceStorageModePrivate);
-    texDesc->setPixelFormat(pixelFormat);
+                      (!generateMipMaps ? MTLTextureUsageRenderTarget : 0)];
+    [texDesc setResourceOptions:MTLResourceStorageModePrivate];
     if (generateMipMaps) {
       if (image->getChannelCount() == 1) {
-        texDesc->setSwizzle(MTLTextureSwizzleChannels{
-            MTLTextureSwizzleRed, MTLTextureSwizzleRed,
-            MTLTextureSwizzleRed, MTLTextureSwizzleRed});
+        [texDesc setSwizzle:(MTLTextureSwizzleChannels){
+                                MTLTextureSwizzleRed, MTLTextureSwizzleRed,
+                                MTLTextureSwizzleRed, MTLTextureSwizzleRed}];
       } else if (image->getChannelCount() == 2) {
-        texDesc->setSwizzle(MTLTextureSwizzleChannels{
-            MTLTextureSwizzleRed, MTLTextureSwizzleGreen,
-            MTLTextureSwizzleRed, MTLTextureSwizzleGreen});
+        [texDesc setSwizzle:(MTLTextureSwizzleChannels){
+                                MTLTextureSwizzleRed, MTLTextureSwizzleGreen,
+                                MTLTextureSwizzleRed, MTLTextureSwizzleGreen}];
       }
     }
-    texture = _device->newTexture(texDesc);
+    texture = [_device newTextureWithDescriptor:texDesc];
     _metalTextureMap[resourceId] = texture;
     image->setResourceId(resourceId);
   } else {
@@ -178,16 +181,16 @@ bool MetalTextureHandler::createRenderResources(ImagePtr image,
     texture = _metalTextureMap[image->getResourceId()];
   }
 
-  MTLCommandQueue *cmdQueue = _device->newCommandQueue();
-  MTLCommandBuffer *cmdBuffer = cmdQueue->commandBuffer();
+  id<MTLCommandQueue> cmdQueue = [_device newCommandQueue];
+  id<MTLCommandBuffer> cmdBuffer = [cmdQueue commandBuffer];
 
-  MTLBlitCommandEncoder *blitCmdEncoder = cmdBuffer->blitCommandEncoder();
+  id<MTLBlitCommandEncoder> blitCmdEncoder = [cmdBuffer blitCommandEncoder];
 
-  NS::UInteger channelCount = image->getChannelCount();
+  NSUInteger channelCount = image->getChannelCount();
 
-  NS::UInteger sourceBytesPerRow = image->getWidth() * channelCount *
-                                   getTextureBaseTypeSize(image->getBaseType());
-  NS::UInteger sourceBytesPerImage = sourceBytesPerRow * image->getHeight();
+  NSUInteger sourceBytesPerRow = image->getWidth() * channelCount *
+                                 getTextureBaseTypeSize(image->getBaseType());
+  NSUInteger sourceBytesPerImage = sourceBytesPerRow * image->getHeight();
 
   std::vector<float> rearrangedDataF;
   std::vector<unsigned char> rearrangedDataC;
@@ -232,26 +235,35 @@ bool MetalTextureHandler::createRenderResources(ImagePtr image,
     channelCount = 4;
   }
 
-  MTLBuffer *buffer = nil;
+  id<MTLBuffer> buffer = nil;
   if (imageData) {
-    buffer = _device->newBuffer(imageData, sourceBytesPerImage,
-                                MTLStorageModeShared);
-    blitCmdEncoder->copyFromBuffer(
-        buffer, 0, sourceBytesPerRow, sourceBytesPerImage,
-        MTLSize::Make(image->getWidth(), image->getHeight(), 1), texture, 0,
-        0, MTLOrigin::Make(0, 0, 0));
+    buffer = [_device newBufferWithBytes:imageData
+                                  length:sourceBytesPerImage
+                                 options:MTLResourceStorageModeShared];
+    [blitCmdEncoder copyFromBuffer:buffer
+                      sourceOffset:0
+                 sourceBytesPerRow:sourceBytesPerRow
+               sourceBytesPerImage:sourceBytesPerImage
+                        sourceSize:MTLSizeMake(image->getWidth(),
+                                               image->getHeight(), 1)
+                         toTexture:texture
+                  destinationSlice:0
+                  destinationLevel:0
+                 destinationOrigin:MTLOriginMake(0, 0, 0)];
   }
 
   if (generateMipMaps && image->getMaxMipCount() > 1)
-    blitCmdEncoder->generateMipmaps(texture);
+    [blitCmdEncoder generateMipmapsForTexture:texture];
 
-  blitCmdEncoder->endEncoding();
+  [blitCmdEncoder endEncoding];
 
-  cmdBuffer->commit();
-  cmdBuffer->waitUntilCompleted();
+  [cmdBuffer commit];
+  [cmdBuffer waitUntilCompleted];
 
   if (buffer)
-    buffer->release();
+#if !__has_feature(objc_arc)
+    [buffer release];
+#endif // !__has_feature(objc_arc)
 
   return true;
 }
@@ -268,7 +280,9 @@ void MetalTextureHandler::releaseRenderResources(ImagePtr image) {
   unsigned int resourceId = image->getResourceId();
   auto tex = _metalTextureMap.find(resourceId);
   if (tex != _metalTextureMap.end()) {
-    tex->second->release();
+#if !__has_feature(objc_arc)
+    [tex->second release];
+#endif // // !__has_feature(objc_arc)
   }
   _metalTextureMap.erase(resourceId);
   image->setResourceId(MslProgram::UNDEFINED_METAL_RESOURCE_ID);
@@ -332,9 +346,11 @@ void MetalTextureHandler::mapFilterTypeToMetal(
   }
 }
 
-void MetalTextureHandler::mapTextureFormatToMetal(
-    Image::BaseType baseType, unsigned int channelCount, bool srgb,
-    MTLDataType &dataType, MTLPixelFormat &pixelFormat) {
+void MetalTextureHandler::mapTextureFormatToMetal(Image::BaseType baseType,
+                                                  unsigned int channelCount,
+                                                  bool srgb,
+                                                  MTLDataType &dataType,
+                                                  MTLPixelFormat &pixelFormat) {
   if (baseType == Image::BaseType::UINT8) {
     dataType = MTLDataTypeChar;
     switch (channelCount) {

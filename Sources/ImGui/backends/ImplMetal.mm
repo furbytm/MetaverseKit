@@ -41,6 +41,7 @@
 #include "ImGui/ImGui.h"
 #ifndef IMGUI_DISABLE
 #include "ImplMetal.h"
+
 #import <Metal/Metal.h>
 #import <time.h>
 
@@ -114,28 +115,29 @@ static inline CFTimeInterval GetMachAbsoluteTimeInSeconds() {
 
 #pragma mark - Dear ImGui Metal C++ Backend API
 
-bool ImGui_ImplMetal_Init(MTL::Device *device) {
+bool ImGui_ImplMetal_Init(id<MTLDevice> device) {
   return ImGui_ImplMetal_Init((__bridge id<MTLDevice>)(device));
 }
 
-void ImGui_ImplMetal_NewFrame(MTL::RenderPassDescriptor *renderPassDescriptor) {
+void ImGui_ImplMetal_NewFrame(
+    id<MTLRenderPassDescriptor> renderPassDescriptor) {
   ImGui_ImplMetal_NewFrame(
-      (__bridge MTLRenderPassDescriptor *)(renderPassDescriptor));
+      (__bridge id<MTLRenderPassDescriptor>)(renderPassDescriptor));
 }
 
-void ImGui_ImplMetal_RenderDrawData(ImDrawData *draw_data,
-                                    MTL::CommandBuffer *commandBuffer,
-                                    MTL::RenderCommandEncoder *commandEncoder) {
+void ImGui_ImplMetal_RenderDrawData(
+    ImDrawData *draw_data, id<MTLCommandBuffer> commandBuffer,
+    id<MTLRenderCommandEncoder> commandEncoder) {
   ImGui_ImplMetal_RenderDrawData(
       draw_data, (__bridge id<MTLCommandBuffer>)(commandBuffer),
       (__bridge id<MTLRenderCommandEncoder>)(commandEncoder));
 }
 
-bool ImGui_ImplMetal_CreateFontsTexture(MTL::Device *device) {
+bool ImGui_ImplMetal_CreateFontsTexture(id<MTLDevice> device) {
   return ImGui_ImplMetal_CreateFontsTexture((__bridge id<MTLDevice>)(device));
 }
 
-bool ImGui_ImplMetal_CreateDeviceObjects(MTL::Device *device) {
+bool ImGui_ImplMetal_CreateDeviceObjects(id<MTLDevice> device) {
   return ImGui_ImplMetal_CreateDeviceObjects((__bridge id<MTLDevice>)(device));
 }
 
@@ -458,13 +460,14 @@ void ImGui_ImplMetal_DestroyDeviceObjects() {
 - (instancetype)initWithRenderPassDescriptor:
     (MTLRenderPassDescriptor *)renderPassDescriptor {
   if ((self = [super init])) {
-    _sampleCount = renderPassDescriptor.colorAttachments[0].texture.sampleCount;
-    _colorPixelFormat =
-        renderPassDescriptor.colorAttachments[0].texture.pixelFormat;
+    _sampleCount = [[[[renderPassDescriptor colorAttachments]
+        objectAtIndexedSubscript:0] texture] sampleCount];
+    _colorPixelFormat = [[[[renderPassDescriptor colorAttachments]
+        objectAtIndexedSubscript:0] texture] pixelFormat];
     _depthPixelFormat =
-        renderPassDescriptor.depthAttachment.texture.pixelFormat;
+        [[[renderPassDescriptor depthAttachment] texture] pixelFormat];
     _stencilPixelFormat =
-        renderPassDescriptor.stencilAttachment.texture.pixelFormat;
+        [[[renderPassDescriptor stencilAttachment] texture] pixelFormat];
   }
   return self;
 }

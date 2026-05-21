@@ -179,9 +179,9 @@ void OslRenderer::renderOSL(const FilePath &dirPath, const string &shaderName,
   // Repeat the render command to allow for sporadic errors.
   int returnValue = 0;
   for (int i = 0; i < 5; i++) {
-    #if !TARGET_OS_IPHONE
+#if !TARGET_OS_IPHONE
     returnValue = std::system(command.c_str());
-    #endif /* !TARGET_OS_IPHONE */
+#endif /* !TARGET_OS_IPHONE */
     if (!returnValue) {
       break;
     }
@@ -238,10 +238,10 @@ void OslRenderer::shadeOSL(const FilePath &dirPath, const string &shaderName,
   command += " -o " + outputName + " " + outputFileName;
   command += " -g 256 256";
   command += " > " + errorFile + redirectString;
-  
+
 #if !TARGET_OS_IPHONE
   int returnValue = std::system(command.c_str());
-#else /* TARGET_OS_IPHONE */
+#else  /* TARGET_OS_IPHONE */
   int returnValue = 0;
 #endif /* !TARGET_OS_IPHONE */
 
@@ -298,7 +298,7 @@ void OslRenderer::compileOSL(const FilePath &oslFilePath) {
 
 #if !TARGET_OS_IPHONE
   int returnValue = std::system(command.c_str());
-#else /* TARGET_OS_IPHONE */
+#else  /* TARGET_OS_IPHONE */
   int returnValue = 0;
 #endif /* !TARGET_OS_IPHONE */
 

@@ -250,8 +250,6 @@ let package = Package(
       ]
     ),
 
-    .target(name: "Apple"),
-
     .target(
       name: "MicrosoftSTL",
       cxxSettings: [
@@ -319,11 +317,11 @@ let package = Package(
     .target(
       name: "MXResources",
       exclude: [
-        // todo: fix metal shader compilation.
+        // TODO: fix metal shader compilation.
         "libraries"
       ],
       resources: [
-        // todo: fix metal shader compilation.
+        // TODO: fix metal shader compilation.
         // .copy("libraries"),
         .copy("Resources/Geometry"),
         .copy("Resources/Images"),
@@ -345,7 +343,6 @@ let package = Package(
     .target(
       name: "MaterialX",
       dependencies: [
-        .target(name: "Apple", condition: .when(platforms: Arch.OS.apple.platform)),
         .target(name: "ImGui"),
         .target(name: "OpenImageIO"),
         .target(name: "OpenImageIO_Util"),
@@ -700,7 +697,7 @@ let package = Package(
       linkerSettings: getConfig(for: .openvdb).linkerSettings
     ),
 
-    /* 
+    /*
       * Run this from the command line via:
       *
       * swift bundler run -p macOS MetaversalDemo */
@@ -1136,10 +1133,6 @@ func getConfig(for target: PkgTarget) -> TargetInfo
           targets: ["TBBMallocProxy"]
         ),
         .library(
-          name: "Apple",
-          targets: ["Apple"]
-        ),
-        .library(
           name: "MicrosoftSTL",
           targets: ["MicrosoftSTL"]
         ),
@@ -1310,7 +1303,7 @@ enum Arch
     /// everything not android (all - android).
     case nodroid
 
-    public var platform: [Platform]
+    var platform: [Platform]
     {
       switch self
       {
@@ -1326,7 +1319,7 @@ enum Arch
       }
     }
 
-    public static func packageDeps() -> [Package.Dependency]
+    static func packageDeps() -> [Package.Dependency]
     {
       #if os(macOS) || os(visionOS) || os(iOS) || os(tvOS) || os(watchOS)
         [
@@ -1344,7 +1337,7 @@ enum Arch
       #endif
     }
 
-    public static func targets() -> [Target]
+    static func targets() -> [Target]
     {
       #if os(macOS) || os(visionOS) || os(iOS) || os(tvOS) || os(watchOS)
         var targs: [Target] = []
@@ -1377,7 +1370,7 @@ enum Arch
       return targs
     }
 
-    public static func products() -> [Product]
+    static func products() -> [Product]
     {
       #if os(macOS) || os(visionOS) || os(iOS) || os(tvOS) || os(watchOS)
         var prods: [Product] = [
@@ -1406,7 +1399,7 @@ enum Arch
       return prods
     }
 
-    public static func ocioDeps() -> [Target.Dependency]
+    static func ocioDeps() -> [Target.Dependency]
     {
       // only add sse2neon on arm arch.
       let sse2neon: [Target.Dependency] = Arch.cpuArch.family.contains(.arm) ? [.target(name: "sse2neon")] : []
@@ -1440,7 +1433,7 @@ enum Arch
       #endif
     }
 
-    public static func minizipDeps() -> [Target.Dependency]
+    static func minizipDeps() -> [Target.Dependency]
     {
       #if os(Linux) || os(OpenBSD) || os(FreeBSD)
         [
@@ -1456,11 +1449,10 @@ enum Arch
       #endif
     }
 
-    public static func glfwDeps() -> [Target.Dependency]
+    static func glfwDeps() -> [Target.Dependency]
     {
       #if os(macOS) || os(visionOS) || os(iOS) || os(tvOS) || os(watchOS)
         [
-          .target(name: "Apple", condition: .when(platforms: Arch.OS.apple.platform)),
           .product(name: "MoltenVK", package: "MetaverseVulkanFramework", condition: .when(platforms: [.macOS, .iOS, .tvOS])),
         ]
       #else /* os(Linux) || os(Android) || os(OpenBSD) || os(FreeBSD) || os(Windows) || os(Cygwin) || os(WASI) */
@@ -1483,7 +1475,7 @@ enum Arch
     case wasm32
     case arm64_32
 
-    public var family: [CPU]
+    var family: [CPU]
     {
       switch self
       {

@@ -26,8 +26,8 @@ MetalRenderPipeline::MetalRenderPipeline(Viewer *viewerPtr)
 
 void MetalRenderPipeline::initialize(void *metal_device,
                                      void *metal_cmd_queue) {
-  MTL(initialize((MTL::Device)metal_device,
-                 (MTL::CommandQueue *)metal_cmd_queue));
+  MTL(initialize((MTLDevice)metal_device,
+                 (id<MTLCommandQueue>)metal_cmd_queue));
 }
 
 mx::ImageHandlerPtr MetalRenderPipeline::createImageHandler() {
@@ -51,8 +51,8 @@ void MetalRenderPipeline::initFramebuffer(int width, int height,
   MTL_PUSH_FRAMEBUFFER(mx::MetalFramebuffer::create(
       MTL(device), width * _viewer->m_pixel_ratio,
       height * _viewer->m_pixel_ratio, 4, mx::Image::BaseType::UINT8,
-      MTL(supportsTiledPipeline) ? (MTL::Texture *)color_texture : nil, false,
-      MTL::PixelFormatBGRA8Unorm));
+      MTL(supportsTiledPipeline) ? (id<MTLTexture>)color_texture : nil, false,
+      MTLPixelFormatBGRA8Unorm));
 }
 
 void MetalRenderPipeline::resizeFramebuffer(int width, int height,
@@ -82,7 +82,7 @@ void MetalRenderPipeline::updateAlbedoTable(int tableSize) {
 
   MTL(beginCommandBuffer());
 
-  MTL::RenderPassDescriptor *renderpassDesc = [MTL::RenderPassDescriptor new];
+  id<MTLRenderPassDescriptor> renderpassDesc = [MTLRenderPassDescriptor new];
 
   [renderpassDesc.colorAttachments[0]
       setTexture:framebuffer->getColorTexture()];
@@ -149,7 +149,7 @@ mx::ImagePtr MetalRenderPipeline::getShadowMap(int shadowMapSize) {
   mx::MetalTextureHandlerPtr mtlImageHandler =
       std::dynamic_pointer_cast<mx::MetalTextureHandler>(imageHandler);
 
-  MTL::Texture *shadowMapTex[SHADOWMAP_TEX_COUNT];
+  id<MTLTexture> shadowMapTex[SHADOWMAP_TEX_COUNT];
   for (int i = 0; i < SHADOWMAP_TEX_COUNT; ++i) {
     if (!_shadowMap[i] || _shadowMap[i]->getWidth() != shadowMapSize ||
         !mtlImageHandler->getAssociatedMetalTexture(_shadowMap[i])) {
@@ -202,8 +202,8 @@ mx::ImagePtr MetalRenderPipeline::getShadowMap(int shadowMapSize) {
         MTL_TRIGGER_CAPTURE;
 
       MTL(beginCommandBuffer());
-      MTL::RenderPassDescriptor *renderpassDesc =
-          [MTL::RenderPassDescriptor new];
+      id<MTLRenderPassDescriptor> renderpassDesc =
+          [MTLRenderPassDescriptor new];
       _shadowMapFramebuffer->setColorTexture(shadowMapTex[0]);
       _shadowMapFramebuffer->bind(renderpassDesc);
       MTL(beginEncoder(renderpassDesc));
@@ -308,10 +308,10 @@ void MetalRenderPipeline::renderFrame(void *color_texture, int shadowMapSize,
   }
 
   MTL(beginCommandBuffer());
-  MTL::RenderPassDescriptor *renderpassDesc = [MTL::RenderPassDescriptor new];
+  id<MTLRenderPassDescriptor> renderpassDesc = [MTLRenderPassDescriptor new];
   if (useTiledPipeline) {
     [renderpassDesc.colorAttachments[0]
-        setTexture:(MTL::Texture *)color_texture];
+        setTexture:(id<MTLTexture>)color_texture];
   } else {
     [renderpassDesc.colorAttachments[0]
         setTexture:MTL(currentFramebuffer())->getColorTexture()];
@@ -469,7 +469,7 @@ void MetalRenderPipeline::renderFrame(void *color_texture, int shadowMapSize,
   {
     MTL(endEncoder());
     [renderpassDesc.colorAttachments[0]
-        setTexture:(MTL::Texture *)color_texture];
+        setTexture:(id<MTLTexture>)color_texture];
     MTL(beginEncoder(renderpassDesc));
     [MTL(renderCmdEncoder) setRenderPipelineState:MTL(linearToSRGB_pso)];
     [MTL(renderCmdEncoder)
@@ -541,9 +541,9 @@ mx::ImagePtr MetalRenderPipeline::getFrameImage() {
   MTL(waitForComplition());
   mx::MetalFramebufferPtr framebuffer = mx::MetalFramebuffer::create(
       MTL(device), width, height, 4, mx::Image::BaseType::UINT8,
-      MTL(supportsTiledPipeline) ? (MTL::Texture *)_viewer->_colorTexture
+      MTL(supportsTiledPipeline) ? (id<MTLTexture>)_viewer->_colorTexture
                                  : MTL(currentFramebuffer())->getColorTexture(),
-      false, MTL::PixelFormatBGRA8Unorm);
+      false, MTLPixelFormatBGRA8Unorm);
   mx::ImagePtr frame = framebuffer->getColorImage(MTL(cmdQueue));
 
   // Flips the captured image

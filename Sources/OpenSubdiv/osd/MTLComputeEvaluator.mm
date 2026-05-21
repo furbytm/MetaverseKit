@@ -25,7 +25,7 @@
 #include "OpenSubdiv/OSDSurfaceMTLComputeEvaluator.h"
 #include "OpenSubdiv/OSDSurfaceMTLPatchShaderSource.h"
 
-#include <Metal/Metal.h>
+#import <Metal/Metal.h>
 #include <simd/simd.h>
 #include <sstream>
 #include <string>
@@ -355,7 +355,7 @@ bool MTLComputeEvaluator::Compile(
 
   _parameterBuffer = [context->device
       newBufferWithLength:sizeof(mtl::KernelUniformArgs)
-                  options:MTLResourceOptionCPUCacheModeDefault];
+                  options:MTLResourceCPUCacheModeDefaultCache];
 
   return true;
 }

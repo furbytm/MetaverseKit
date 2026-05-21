@@ -8,8 +8,8 @@
 #if defined(__linux__) || defined(__FreeBSD__)
 #include <X11/Intrinsic.h>
 #elif defined(__APPLE__)
-#include <TargetConditionals.h>
 #include <MaterialX/MXRenderHwWindowCocoaWrappers.h>
+#include <TargetConditionals.h>
 #endif
 
 MATERIALX_NAMESPACE_BEGIN

@@ -97,7 +97,7 @@ class Creator
   let app = OSApp.shared
   let delegate = AppDelegate()
 
-  public init()
+  init()
   {
     app.delegate = delegate
   }
@@ -166,8 +166,8 @@ class Creator
       {
         print("Error writing image: \(comp.geterror(true))")
       }
-    } 
-    else 
+    }
+    else
     {
       print("Error filling fg image.")
     }
