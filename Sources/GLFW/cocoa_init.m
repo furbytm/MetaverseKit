@@ -26,6 +26,8 @@
 // It is fine to use C99 in this file because it will not be built with VS
 //========================================================================
 
+#if defined(_GLFW_COCOA)
+
 #include "internal.h"
 #include <Foundation/NSArray.h>
 #include <Foundation/NSDictionary.h>
@@ -801,3 +803,5 @@ const char* _glfwPlatformGetVersionString(void)
         ;
 }
 
+
+#endif // defined(_GLFW_COCOA)

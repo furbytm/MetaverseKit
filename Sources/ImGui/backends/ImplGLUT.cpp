@@ -43,6 +43,9 @@
 //  zero. 2018-11-30: Misc: Setting up io.BackendPlatformName so it can be
 //  displayed in the About Window. 2018-03-22: Added GLUT Platform binding.
 
+#ifdef __APPLE__
+// only for apple platforms...
+
 #include "ImGui/ImGui.h"
 #ifndef IMGUI_DISABLE
 #include "ImplGLUT.h"
@@ -436,3 +439,5 @@ void ImGui_ImplGLUT_MotionFunc(int x, int y) {
 //-----------------------------------------------------------------------------
 
 #endif // #ifndef IMGUI_DISABLE
+
+#endif // __APPLE__

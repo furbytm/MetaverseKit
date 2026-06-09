@@ -27,6 +27,10 @@
 // It is fine to use C99 in this file because it will not be built with VS
 //========================================================================
 
+// Guard: macOS uses cocoa_time.c for timers; this file is for POSIX platforms
+// (Linux with _GLFW_X11, Android with _GLFW_OSMESA, and other POSIX targets).
+#if !defined(_GLFW_COCOA)
+
 #define _POSIX_C_SOURCE 199309L
 
 #include "internal.h"
@@ -87,4 +91,6 @@ uint64_t _glfwPlatformGetTimerFrequency(void)
 {
     return _glfw.timer.posix.frequency;
 }
+
+#endif // !defined(_GLFW_COCOA)
 

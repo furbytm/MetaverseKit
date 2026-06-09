@@ -3,6 +3,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+#ifdef __APPLE__
+// only for apple platforms...
+
 #import <Foundation/Foundation.h>
 #include <MaterialX/MXRenderMslMetalState.h>
 #import <Metal/Metal.h>
@@ -255,3 +258,5 @@ void MetalState::waitForComplition() {
 MaterialX::MetalFramebufferPtr MetalState::currentFramebuffer() {
   return framebufferStack.top();
 }
+
+#endif // __APPLE__

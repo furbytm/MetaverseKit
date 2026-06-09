@@ -18,6 +18,8 @@
 #if !TARGET_OS_IPHONE
 #include <OpenGL/gl.h>
 #endif /* !TARGET_OS_IPHONE */
+#elif defined(__ANDROID__)
+#include <EGL/egl.h>
 #elif defined(__linux__) || defined(__FreeBSD__)
 #include <GL/glx.h>
 #endif
@@ -27,6 +29,8 @@ MATERIALX_NAMESPACE_BEGIN
 /// Platform dependent definition of a hardware context
 #if defined(_WIN32)
 using HardwareContextHandle = HGLRC;
+#elif defined(__ANDROID__)
+using HardwareContextHandle = EGLContext;
 #elif defined(__linux__) || defined(__FreeBSD__)
 using HardwareContextHandle = GLXContext;
 #else
@@ -74,7 +78,11 @@ protected:
   // Flag to indicate validity
   bool _isValid;
 
-#if defined(__linux__) || defined(__FreeBSD__)
+#if defined(__ANDROID__)
+  // EGL display and surface used by context operations on Android.
+  EGLDisplay _eglDisplay;
+  EGLSurface _eglSurface;
+#elif defined(__linux__) || defined(__FreeBSD__)
   // An X window used by context operations
   Window _xWindow;
 

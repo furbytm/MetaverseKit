@@ -176,7 +176,8 @@ let package = Package(
         .define("static_assert(_conditional, ...)", to: "", .when(platforms: [.windows])),
       ],
       linkerSettings: [
-        .linkedLibrary("bz2", .when(platforms: Arch.OS.nix.platform))
+        // bzip2 is not in the Android NDK sysroot; exclude Android.
+        .linkedLibrary("bz2", .when(platforms: Arch.OS.nixnodroid.platform))
       ]
     ),
 
@@ -376,7 +377,7 @@ let package = Package(
       name: "OpenSubdiv",
       dependencies: [
         .target(name: "MetaTBB"),
-        .target(name: "OpenMP", condition: .when(platforms: Arch.OS.nodroid.platform)),
+        .target(name: "OpenMP"),
       ],
       exclude: getConfig(for: .osd).exclude,
       publicHeadersPath: "include",
@@ -507,7 +508,8 @@ let package = Package(
         .define("static_assert(_conditional, ...)", to: "", .when(platforms: [.windows])),
       ],
       linkerSettings: [
-        .linkedLibrary("deflate", .when(platforms: Arch.OS.linux.platform)),
+        // libdeflate is not in the Android NDK sysroot; Android uses the bundled DEFLATE target.
+        .linkedLibrary("deflate", .when(platforms: [.linux, .openbsd])),
       ]
     ),
 
@@ -678,7 +680,8 @@ let package = Package(
         .define("static_assert(_conditional, ...)", to: "", .when(platforms: [.windows])),
       ],
       linkerSettings: [
-        .linkedLibrary("pthread", .when(platforms: Arch.OS.linux.platform)),
+        // Android pthreads are part of libc (bionic); no separate -lpthread needed.
+        .linkedLibrary("pthread", .when(platforms: [.linux, .openbsd])),
       ]
     ),
 
@@ -860,14 +863,15 @@ func getConfig(for target: PkgTarget) -> TargetInfo
         ]
       #endif /* os(Windows) */
     case .glfw:
+      // null_*.c are guarded internally with #if defined(_GLFW_OSMESA) so they
+      // compile to empty translation units on macOS/Linux (where _GLFW_OSMESA is
+      // not defined) and provide the full null-platform implementation on Android
+      // (where _GLFW_OSMESA is set via .when(platforms: [.android]) in cxxSettings).
+      // Do NOT add them to the exclude list.
       config.exclude = [
         "wl_init.c",
         "wl_window.c",
         "wl_monitor.c",
-        "null_init.c",
-        "null_joystick.c",
-        "null_monitor.c",
-        "null_window.c",
       ]
       #if !os(Windows)
         config.exclude += [
@@ -895,21 +899,26 @@ func getConfig(for target: PkgTarget) -> TargetInfo
           "cocoa_time.c",
         ]
       #endif /* !os(macOS) && !os(visionOS) && !os(iOS) && !os(tvOS) && !os(watchOS) */
-      #if !os(Linux) && !os(Android) && !os(OpenBSD) && !os(FreeBSD)
+      // Exclude X11/GLX files on every platform that does not use X11.
+      // Android uses the null/OSMESA platform, so it also gets excluded here.
+      #if !os(Linux) && !os(OpenBSD) && !os(FreeBSD)
         config.exclude += [
           "xkb_unicode.c",
           "x11_init.c",
           "x11_monitor.c",
           "x11_window.c",
-          "posix_time.c",
           "glx_context.c",
           "linux_joystick.c",
         ]
-      #endif /* !os(Linux) && !os(Android) && !os(OpenBSD) && !os(FreeBSD) */
+      #endif /* !os(Linux) && !os(OpenBSD) && !os(FreeBSD) */
+      // posix_time.c is guarded internally with #if !defined(_GLFW_COCOA) so it
+      // compiles to nothing on macOS (which uses cocoa_time.c instead) and
+      // provides POSIX timer functions on Linux, Android, and other POSIX targets.
       config.cxxSettings = [
         .headerSearchPath("."),
         .define("_GLFW_COCOA", to: "1", .when(platforms: Arch.OS.apple.platform)),
-        .define("_GLFW_X11", to: "1", .when(platforms: Arch.OS.linux.platform)),
+        .define("_GLFW_X11", to: "1", .when(platforms: [.linux, .openbsd])),
+        .define("_GLFW_OSMESA", to: "1", .when(platforms: [.android])),
         .define("_GLFW_WIN32", to: "1", .when(platforms: Arch.OS.windows.platform)),
         .define("GL_SILENCE_DEPRECATION", to: "1"),
         .define("_ALLOW_COMPILER_AND_STL_VERSION_MISMATCH", .when(platforms: [.windows])),

@@ -27,6 +27,8 @@
 // It is fine to use C99 in this file because it will not be built with VS
 //========================================================================
 
+#if defined(_GLFW_OSMESA)
+
 #include "internal.h"
 
 
@@ -330,3 +332,5 @@ VkResult _glfwPlatformCreateWindowSurface(VkInstance instance,
     return VK_ERROR_INITIALIZATION_FAILED;
 }
 
+
+#endif // defined(_GLFW_OSMESA)

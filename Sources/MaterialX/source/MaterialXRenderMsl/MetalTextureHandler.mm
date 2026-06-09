@@ -3,6 +3,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+#ifdef __APPLE__
+// only for apple platforms...
+
 #include <MaterialX/MXRenderMslMetalTextureHandler.h>
 #include <MaterialX/MXRenderMslPipelineStateObject.h>
 #include <MaterialX/MXRenderShaderRenderer.h>
@@ -457,3 +460,5 @@ size_t MetalTextureHandler::getTextureBaseTypeSize(Image::BaseType baseType) {
 }
 
 MATERIALX_NAMESPACE_END
+
+#endif // __APPLE__

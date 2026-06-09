@@ -22,6 +22,9 @@
 //   language governing permissions and limitations under the Apache License.
 //
 
+#ifdef __APPLE__
+// only for apple platforms...
+
 #include "OpenSubdiv/OSDAdaptiveError.h"
 #include "OpenSubdiv/OSDSurfaceMTLPatchShaderSource.h"
 
@@ -6348,3 +6351,5 @@ std::string MTLPatchShaderSource::GetDomainShaderSource(
 
 } // end namespace OPENSUBDIV_VERSION
 } // end namespace OpenSubdiv
+
+#endif // __APPLE__

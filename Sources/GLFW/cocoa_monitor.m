@@ -27,6 +27,8 @@
 // It is fine to use C99 in this file because it will not be built with VS
 //========================================================================
 
+#if defined(_GLFW_COCOA)
+
 #include "internal.h"
 
 #include <stdlib.h>
@@ -648,3 +650,5 @@ GLFWAPI CGDirectDisplayID glfwGetCocoaMonitor(GLFWmonitor* handle)
     return monitor->ns.displayID;
 }
 #endif /* !TARGET_OS_IPHONE */
+
+#endif // defined(_GLFW_COCOA)

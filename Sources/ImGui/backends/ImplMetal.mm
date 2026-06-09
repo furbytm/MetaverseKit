@@ -38,6 +38,9 @@
 //  io.BackendRendererName so it can be displayed in the About Window.
 //  2018-07-05: Metal: Added new Metal backend implementation.
 
+#ifdef __APPLE__
+// only for apple platforms...
+
 #include "ImGui/ImGui.h"
 #ifndef IMGUI_DISABLE
 #include "ImplMetal.h"
@@ -675,3 +678,5 @@ void ImGui_ImplMetal_DestroyDeviceObjects() {
 //-----------------------------------------------------------------------------
 
 #endif // #ifndef IMGUI_DISABLE
+
+#endif // __APPLE__
