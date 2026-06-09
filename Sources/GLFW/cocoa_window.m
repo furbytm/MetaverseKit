@@ -26,6 +26,8 @@
 // It is fine to use C99 in this file because it will not be built with VS
 //========================================================================
 
+#if defined(_GLFW_COCOA)
+
 #include "internal.h"
 
 #include <float.h>
@@ -2155,3 +2157,5 @@ GLFWAPI id glfwGetCocoaWindow(GLFWwindow* handle)
     _GLFW_REQUIRE_INIT_OR_RETURN(nil);
     return window->ns.object;
 }
+
+#endif // defined(_GLFW_COCOA)

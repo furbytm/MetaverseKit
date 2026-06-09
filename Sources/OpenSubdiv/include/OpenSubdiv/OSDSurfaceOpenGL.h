@@ -36,7 +36,7 @@
             #include <OpenGL/gl3.h>
         #endif
     #endif
-#elif defined(ANDROID)
+#elif defined(__ANDROID__)
     #include <GLES2/gl2.h>
 #else
     #if defined(_WIN32)

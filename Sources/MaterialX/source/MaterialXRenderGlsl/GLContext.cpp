@@ -5,6 +5,8 @@
 
 #if defined(_WIN32)
 #include <windows.h>
+#elif defined(__ANDROID__)
+/* EGL included via MXRenderGlslGLContext.h */
 #elif defined(__linux__) || defined(__FreeBSD__)
 #include <X11/Intrinsic.h>
 #elif defined(__APPLE__)
@@ -76,6 +78,65 @@ GLContext::GLContext(SimpleWindowPtr window,
       }
     }
   }
+}
+
+#elif defined(__ANDROID__)
+
+GLContext::GLContext(const SimpleWindowPtr window,
+                     HardwareContextHandle sharedWithContext)
+    : _window(window), _contextHandle(EGL_NO_CONTEXT), _isValid(false),
+      _eglDisplay(EGL_NO_DISPLAY), _eglSurface(EGL_NO_SURFACE) {
+  _eglDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+  if (_eglDisplay == EGL_NO_DISPLAY) {
+    return;
+  }
+  if (!eglInitialize(_eglDisplay, nullptr, nullptr)) {
+    return;
+  }
+
+  // Request an OpenGL ES 3.x-capable pbuffer config.
+  static const EGLint configAttribs[] = {
+    EGL_SURFACE_TYPE,    EGL_PBUFFER_BIT,
+    EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT,
+    EGL_RED_SIZE,        8,
+    EGL_GREEN_SIZE,      8,
+    EGL_BLUE_SIZE,       8,
+    EGL_DEPTH_SIZE,      24,
+    EGL_STENCIL_SIZE,    8,
+    EGL_NONE
+  };
+  EGLConfig config;
+  EGLint numConfigs = 0;
+  if (!eglChooseConfig(_eglDisplay, configAttribs, &config, 1, &numConfigs) || numConfigs == 0) {
+    return;
+  }
+
+  // Offscreen pbuffer surface (mirrors the 10x10 X window on Linux).
+  static const EGLint pbufferAttribs[] = {
+    EGL_WIDTH,  10,
+    EGL_HEIGHT, 10,
+    EGL_NONE
+  };
+  _eglSurface = eglCreatePbufferSurface(_eglDisplay, config, pbufferAttribs);
+  if (_eglSurface == EGL_NO_SURFACE) {
+    return;
+  }
+
+  static const EGLint contextAttribs[] = {
+    EGL_CONTEXT_CLIENT_VERSION, 3,
+    EGL_NONE
+  };
+  _contextHandle = eglCreateContext(_eglDisplay, config,
+                                    sharedWithContext ? sharedWithContext : EGL_NO_CONTEXT,
+                                    contextAttribs);
+  if (_contextHandle == EGL_NO_CONTEXT) {
+    return;
+  }
+
+  if (!eglMakeCurrent(_eglDisplay, _eglSurface, _eglSurface, _contextHandle)) {
+    return;
+  }
+  _isValid = true;
 }
 
 #elif defined(__linux__) || defined(__FreeBSD__)
@@ -161,6 +222,17 @@ GLContext::~GLContext() {
 
     wglDeleteContext(_contextHandle);
 
+#elif defined(__ANDROID__)
+
+    eglMakeCurrent(_eglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+    if (_contextHandle != EGL_NO_CONTEXT) {
+      eglDestroyContext(_eglDisplay, _contextHandle);
+    }
+    if (_eglSurface != EGL_NO_SURFACE) {
+      eglDestroySurface(_eglDisplay, _eglSurface);
+    }
+    eglTerminate(_eglDisplay);
+
 #elif defined(__linux__) || defined(__FreeBSD__)
 
     glXMakeCurrent(_xDisplay, None, NULL);
@@ -192,6 +264,8 @@ int GLContext::makeCurrent() {
 #if defined(_WIN32)
   makeCurrentOk = wglMakeCurrent(_window->getWindowWrapper()->internalHandle(),
                                  _contextHandle);
+#elif defined(__ANDROID__)
+  makeCurrentOk = eglMakeCurrent(_eglDisplay, _eglSurface, _eglSurface, _contextHandle) ? 1 : 0;
 #elif defined(__linux__) || defined(__FreeBSD__)
   makeCurrentOk = glXMakeCurrent(_xDisplay, _xWindow, _contextHandle);
 #elif defined(__APPLE__)

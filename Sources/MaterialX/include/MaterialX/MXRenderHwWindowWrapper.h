@@ -10,7 +10,7 @@
 #define WIN32_LEAN_AND_MEAN
 #undef APIENTRY
 #include <windows.h>
-#elif defined(__linux__) || defined(__FreeBSD__)
+#elif !defined(__ANDROID__) && (defined(__linux__) || defined(__FreeBSD__))
 #include <X11/X.h>    // for Window
 #include <X11/Xlib.h> // for Display
 using Widget = struct _WidgetRec *;
@@ -28,7 +28,7 @@ using ExternalWindowHandle = HWND;
 using InternalWindowHandle = HDC;
 /// Display handle concept has no equivalence on Windows
 using DisplayHandle = void *;
-#elif defined(__linux__) || defined(__FreeBSD__)
+#elif !defined(__ANDROID__) && (defined(__linux__) || defined(__FreeBSD__))
 /// External handle is a widget
 using ExternalWindowHandle = Widget;
 /// Internal handle is the window for the widget
@@ -81,7 +81,7 @@ public:
   /// Release resources stored in wrapper
   void release();
 
-#if defined(__linux__) || defined(__FreeBSD__)
+#if !defined(__ANDROID__) && (defined(__linux__) || defined(__FreeBSD__))
   /// Return X display
   Display *getXDisplay() const { return _xDisplay; }
 #endif
@@ -94,7 +94,7 @@ protected:
   ExternalWindowHandle _externalHandle;
   InternalWindowHandle _internalHandle;
 
-#if defined(__linux__) || defined(__FreeBSD__)
+#if !defined(__ANDROID__) && (defined(__linux__) || defined(__FreeBSD__))
   /// Window ID of framebuffer instance created in the wrapper
   Window _framebufferWindow;
   /// X Display

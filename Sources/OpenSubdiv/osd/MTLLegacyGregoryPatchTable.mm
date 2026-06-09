@@ -22,6 +22,9 @@
 //   language governing permissions and limitations under the Apache License.
 //
 
+#ifdef __APPLE__
+// only for apple platforms...
+
 #include "OpenSubdiv/OSDSurfaceMTLLegacyGregoryPatchTable.h"
 #import <Metal/Metal.h>
 
@@ -107,3 +110,5 @@ void MTLLegacyGregoryPatchTable::UpdateVertexBuffer(id<MTLBuffer> vbo,
 
 } // end namespace OPENSUBDIV_VERSION
 } // end namespace OpenSubdiv
+
+#endif // __APPLE__

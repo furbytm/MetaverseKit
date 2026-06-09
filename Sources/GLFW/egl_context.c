@@ -27,6 +27,11 @@
 // Please use C89 style variable declarations in this file because VS 2010
 //========================================================================
 
+// EGL context is only meaningful when a real windowing platform is in use.
+// _GLFW_OSMESA selects the null/headless platform (e.g. Android cross-builds)
+// where egl_context.h is never pulled in and EGL types are undefined.
+#if !defined(_GLFW_OSMESA)
+
 #include "internal.h"
 
 #include <stdio.h>
@@ -787,3 +792,5 @@ GLFWAPI EGLSurface glfwGetEGLSurface(GLFWwindow* handle)
     return window->context.egl.surface;
 }
 
+
+#endif // !defined(_GLFW_OSMESA)

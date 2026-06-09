@@ -26,6 +26,8 @@
 // It is fine to use C99 in this file because it will not be built with VS
 //========================================================================
 
+#if defined(_GLFW_COCOA)
+
 #include "internal.h"
 
 #include <mach/mach_time.h>
@@ -60,3 +62,5 @@ uint64_t _glfwPlatformGetTimerFrequency(void)
     return _glfw.timer.ns.frequency;
 }
 
+
+#endif // defined(_GLFW_COCOA)

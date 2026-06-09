@@ -3,6 +3,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+#ifdef __APPLE__
+// only for apple platforms...
+
 #include <MaterialX/MXRenderMslMaterial.h>
 
 #include <MaterialX/MXFormatUtil.h>
@@ -303,3 +306,5 @@ void MslMaterial::modifyUniform(const std::string &path, ConstValuePtr value,
 }
 
 MATERIALX_NAMESPACE_END
+
+#endif // __APPLE__

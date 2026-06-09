@@ -3,6 +3,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+#ifdef __APPLE__
+// only for apple platforms...
+
 #include <MaterialX/MXRenderMslMetalFramebuffer.h>
 
 #include <MaterialX/MXRenderMslMetalTextureHandler.h>
@@ -170,3 +173,5 @@ ImagePtr MetalFramebuffer::getColorImage(id<MTLCommandQueue> cmdQueue,
 }
 
 MATERIALX_NAMESPACE_END
+
+#endif // __APPLE__

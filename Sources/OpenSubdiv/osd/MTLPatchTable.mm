@@ -22,6 +22,9 @@
 //   language governing permissions and limitations under the Apache License.
 //
 
+#ifdef __APPLE__
+// only for apple platforms...
+
 #import "OpenSubdiv/OSDAdaptivePatchTable.h"
 #import "OpenSubdiv/OSDSurfaceCpuPatchTable.h"
 #import "OpenSubdiv/OSDSurfaceMTLPatchTable.h"
@@ -155,3 +158,5 @@ bool MTLPatchTable::allocate(Far::PatchTable const *farPatchTable,
 } // end namespace Osd
 } // end namespace OPENSUBDIV_VERSION
 } // end namespace OpenSubdiv
+
+#endif // __APPLE__

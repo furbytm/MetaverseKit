@@ -5,7 +5,7 @@
 
 #include <MaterialX/MXRenderHwWindowWrapper.h>
 
-#if defined(__linux__) || defined(__FreeBSD__)
+#if !defined(__ANDROID__) && (defined(__linux__) || defined(__FreeBSD__))
 #include <X11/Intrinsic.h>
 #elif defined(__APPLE__)
 #include <MaterialX/MXRenderHwWindowCocoaWrappers.h>
@@ -39,7 +39,7 @@ void WindowWrapper::release() {
   _internalHandle = 0;
 }
 
-#elif defined(__linux__) || defined(__FreeBSD__)
+#elif !defined(__ANDROID__) && (defined(__linux__) || defined(__FreeBSD__))
 
 WindowWrapper::WindowWrapper(ExternalWindowHandle externalHandle,
                              InternalWindowHandle internalHandle,
@@ -62,6 +62,24 @@ void WindowWrapper::release() {
   _internalHandle = 0;
   _framebufferWindow = 0;
   _xDisplay = 0;
+}
+
+#elif defined(__ANDROID__)
+
+// Android has no X11/Cocoa window wrapper; EGL surfaces are managed by the
+// Android runtime. These are intentional no-op stubs.
+WindowWrapper::WindowWrapper(ExternalWindowHandle externalHandle,
+                             InternalWindowHandle internalHandle,
+                             DisplayHandle /*display*/) {
+  _externalHandle = externalHandle;
+  _internalHandle = internalHandle;
+}
+
+WindowWrapper::~WindowWrapper() { release(); }
+
+void WindowWrapper::release() {
+  _externalHandle = nullptr;
+  _internalHandle = nullptr;
 }
 
 #elif defined(__APPLE__)

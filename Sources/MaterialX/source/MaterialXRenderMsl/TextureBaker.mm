@@ -3,6 +3,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+#ifdef __APPLE__
+// only for apple platforms...
+
 #include <MaterialX/MXRenderMslTextureBaker.h>
 
 #include <MaterialX/MXRenderOiioImageLoader.h>
@@ -21,3 +24,5 @@ TextureBakerMsl::TextureBakerMsl(unsigned int width, unsigned int height,
                                                     false) {}
 
 MATERIALX_NAMESPACE_END
+
+#endif // __APPLE__

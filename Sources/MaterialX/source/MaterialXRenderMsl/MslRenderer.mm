@@ -3,6 +3,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+#ifdef __APPLE__
+// only for apple platforms...
+
 #import <Foundation/Foundation.h>
 
 #include <MaterialX/MXGenShaderHwShaderGenerator.h>
@@ -245,3 +248,5 @@ ImagePtr MslRenderer::captureImage(ImagePtr image) {
 }
 
 MATERIALX_NAMESPACE_END
+
+#endif // __APPLE__

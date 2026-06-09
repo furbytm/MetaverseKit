@@ -3,6 +3,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+#ifdef __APPLE__
+// only for apple platforms...
+
 #import <Foundation/Foundation.h>
 
 #include <MaterialX/MXRenderMslMetalFramebuffer.h>
@@ -1600,3 +1603,5 @@ void MslProgram::printAttributes(std::ostream &outputStream) {
 }
 
 MATERIALX_NAMESPACE_END
+
+#endif // __APPLE__

@@ -26,6 +26,8 @@
 // It is fine to use C99 in this file because it will not be built with VS
 //========================================================================
 
+#if defined(_GLFW_COCOA)
+
 #include "internal.h"
 
 #include <unistd.h>
@@ -382,3 +384,5 @@ GLFWAPI id glfwGetNSGLContext(GLFWwindow* handle)
     return window->context.nsgl.object;
 }
 
+
+#endif // defined(_GLFW_COCOA)

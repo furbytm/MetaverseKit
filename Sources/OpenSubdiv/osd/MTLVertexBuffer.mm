@@ -22,6 +22,9 @@
 //   language governing permissions and limitations under the Apache License.
 //
 
+#ifdef __APPLE__
+// only for apple platforms...
+
 #include "OpenSubdiv/OSDSurfaceMTLVertexBuffer.h"
 #import <Metal/Metal.h>
 #include <TargetConditionals.h>
@@ -90,3 +93,5 @@ id<MTLBuffer> CPUMTLVertexBuffer::BindMTLBuffer(MTLContext *context) {
 
 } // end namespace OPENSUBDIV_VERSION
 } // end namespace OpenSubdiv
+
+#endif // __APPLE__

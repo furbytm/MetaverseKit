@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#if defined(__linux__) || defined(__FreeBSD__)
+#if !defined(__ANDROID__) && (defined(__linux__) || defined(__FreeBSD__))
 
 #include <MaterialX/MXRenderHwSimpleWindow.h>
 

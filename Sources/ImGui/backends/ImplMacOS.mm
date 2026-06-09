@@ -25,6 +25,9 @@
 // from the docs/ folder + read the top of imgui.cpp. Read online:
 // https://github.com/ocornut/imgui/tree/master/docs
 
+#ifdef __APPLE__
+// only for apple platforms...
+
 #import "ImGui/ImGui.h"
 #ifndef IMGUI_DISABLE
 #import "ImplMacOS.h"
@@ -1033,3 +1036,5 @@ static void ImGui_ImplOSX_AddTrackingArea(NSView *_Nonnull view) {
 //-----------------------------------------------------------------------------
 
 #endif // #ifndef IMGUI_DISABLE
+
+#endif // __APPLE__
