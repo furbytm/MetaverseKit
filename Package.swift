@@ -1006,6 +1006,7 @@ func getConfig(for target: PkgTarget) -> TargetInfo
         /* no metal on linux or windows or wasm */
         config.exclude += [
           "source/MaterialXRenderMsl",
+          "source/MaterialXRenderHw/WindowCocoaWrappers.m"
         ]
       #endif /* !os(macOS) && !os(visionOS) && !os(iOS) && !os(tvOS) && !os(watchOS) */
     case .osd:
