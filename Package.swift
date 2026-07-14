@@ -40,36 +40,36 @@ let package = Package(
       ]
     ),
 
-    .target(
-      name: "TBBMallocProxy",
-      dependencies: [
-        .target(name: "OneTBB"),
-      ],
-      cxxSettings: [
-        .define("_XOPEN_SOURCE", to: "1", .when(platforms: Arch.OS.apple.platform)),
-        .define("_ALLOW_COMPILER_AND_STL_VERSION_MISMATCH", .when(platforms: [.windows])),
-        .define("_ALLOW_KEYWORD_MACROS", to: "1", .when(platforms: [.windows])),
-        .define("static_assert(_conditional, ...)", to: "", .when(platforms: [.windows])),
-        .define("TBBPROXY_NO_DLLMAIN")
-      ]
-    ),
+    // .target(
+    //   name: "TBBMallocProxy",
+    //   dependencies: [
+    //     .target(name: "OneTBB"),
+    //   ],
+    //   cxxSettings: [
+    //     .define("_XOPEN_SOURCE", to: "1", .when(platforms: Arch.OS.apple.platform)),
+    //     .define("_ALLOW_COMPILER_AND_STL_VERSION_MISMATCH", .when(platforms: [.windows])),
+    //     .define("_ALLOW_KEYWORD_MACROS", to: "1", .when(platforms: [.windows])),
+    //     .define("static_assert(_conditional, ...)", to: "", .when(platforms: [.windows])),
+    //     .define("TBBPROXY_NO_DLLMAIN")
+    //   ]
+    // ),
 
-    .target(
-      name: "TBBMalloc",
-      dependencies: [
-        .target(name: "OneTBB"),
-        .target(name: "TBBMallocProxy"),
-      ],
-      cxxSettings: [
-        .headerSearchPath("include/TBBMalloc"),
-        .define("_XOPEN_SOURCE", to: "1", .when(platforms: Arch.OS.apple.platform)),
-        .define("__TBBMALLOC_BUILD", to: "1"),
-        .define("_ALLOW_COMPILER_AND_STL_VERSION_MISMATCH", .when(platforms: [.windows])),
-        .define("_ALLOW_KEYWORD_MACROS", to: "1", .when(platforms: [.windows])),
-        .define("static_assert(_conditional, ...)", to: "", .when(platforms: [.windows])),
-        .define("TBBMALLOC_NO_DLLMAIN")
-      ]
-    ),
+    // .target(
+    //   name: "TBBMalloc",
+    //   dependencies: [
+    //     .target(name: "OneTBB"),
+    //     .target(name: "TBBMallocProxy"),
+    //   ],
+    //   cxxSettings: [
+    //     .headerSearchPath("include/TBBMalloc"),
+    //     .define("_XOPEN_SOURCE", to: "1", .when(platforms: Arch.OS.apple.platform)),
+    //     .define("__TBBMALLOC_BUILD", to: "1"),
+    //     .define("_ALLOW_COMPILER_AND_STL_VERSION_MISMATCH", .when(platforms: [.windows])),
+    //     .define("_ALLOW_KEYWORD_MACROS", to: "1", .when(platforms: [.windows])),
+    //     .define("static_assert(_conditional, ...)", to: "", .when(platforms: [.windows])),
+    //     .define("TBBMALLOC_NO_DLLMAIN")
+    //   ]
+    // ),
 
     .target(
       name: "OneTBB",
@@ -84,7 +84,14 @@ let package = Package(
         .define("static_assert(_conditional, ...)", to: "", .when(platforms: [.windows])),
         .define("__TBB_BUILD"),
         .define("__TBB_NO_IMPLICIT_LINKAGE", to: "1", .when(platforms: [.windows])),
-        .define("TBB_NO_LIB_LINKAGE")
+        .define("TBB_NO_LIB_LINKAGE"),
+        // TBB derives TBB_USE_DEBUG (and, from it, TBB_USE_PROFILING_TOOLS and
+        // TBB_USE_ASSERT) from _DEBUG, which only MSVC defines. On clang/gcc it's
+        // absent, so upstream OpenUSD resolves both to 0 in every configuration.
+        // Pinned explicitly here because SwiftPM's C++ interop can't be relied on
+        // to resolve the #ifndef chain identically on both sides of the boundary.
+        .define("TBB_USE_DEBUG", to: "0"),
+        .define("TBB_USE_PROFILING_TOOLS", to: "0"),
       ]
     ),
 
@@ -92,8 +99,8 @@ let package = Package(
       name: "tbb",
       dependencies: [
         .target(name: "OneTBB"),
-        .target(name: "TBBMalloc"),
-        .target(name: "TBBMallocProxy"),
+        // .target(name: "TBBMalloc"),
+        // .target(name: "TBBMallocProxy"),
       ],
       publicHeadersPath: "include",
       cxxSettings: [
@@ -104,7 +111,13 @@ let package = Package(
         .define("static_assert(_conditional, ...)", to: "", .when(platforms: [.windows])),
         .define("__TBB_NO_IMPLICIT_LINKAGE", to: "1", .when(platforms: [.windows])),
         .define("TBB_NO_LIB_LINKAGE"),
-        .define("TBB_USE_PROFILING_TOOLS", to: "2"),
+        // TBB derives TBB_USE_DEBUG (and, from it, TBB_USE_PROFILING_TOOLS and
+        // TBB_USE_ASSERT) from _DEBUG, which only MSVC defines. On clang/gcc it's
+        // absent, so upstream OpenUSD resolves both to 0 in every configuration.
+        // Pinned explicitly here because SwiftPM's C++ interop can't be relied on
+        // to resolve the #ifndef chain identically on both sides of the boundary.
+        .define("TBB_USE_DEBUG", to: "0"),
+        .define("TBB_USE_PROFILING_TOOLS", to: "0"),
       ]
     ),
 
@@ -112,17 +125,23 @@ let package = Package(
       name: "MetaTBB",
       dependencies: [
         .target(name: "OneTBB"),
-        .target(name: "TBBMalloc"),
-        .target(name: "TBBMallocProxy"),
+        // .target(name: "TBBMalloc"),
+        // .target(name: "TBBMallocProxy"),
         .target(name: "tbb", condition: .when(platforms: Arch.OS.applewindowsdroid.platform)),
       ],
       exclude: [],
       cxxSettings: [
-        .define("_XOPEN_SOURCE"),
-        .define("TBB_USE_PROFILING_TOOLS", to: "2"),
+        .define("_XOPEN_SOURCE", to: "1", .when(platforms: Arch.OS.apple.platform)),
         .define("_ALLOW_COMPILER_AND_STL_VERSION_MISMATCH", .when(platforms: [.windows])),
         .define("_ALLOW_KEYWORD_MACROS", to: "1", .when(platforms: [.windows])),
         .define("static_assert(_conditional, ...)", to: "", .when(platforms: [.windows])),
+        // TBB derives TBB_USE_DEBUG (and, from it, TBB_USE_PROFILING_TOOLS and
+        // TBB_USE_ASSERT) from _DEBUG, which only MSVC defines. On clang/gcc it's
+        // absent, so upstream OpenUSD resolves both to 0 in every configuration.
+        // Pinned explicitly here because SwiftPM's C++ interop can't be relied on
+        // to resolve the #ifndef chain identically on both sides of the boundary.
+        .define("TBB_USE_DEBUG", to: "0"),
+        .define("TBB_USE_PROFILING_TOOLS", to: "0"),
       ],
       swiftSettings: [
         .interoperabilityMode(.Cxx),
@@ -763,10 +782,6 @@ func getConfig(for target: PkgTarget) -> TargetInfo
   {
     case .draco:
       break
-    case .tbbMallocProxy:
-      break
-    case .tbbMalloc:
-      break
     case .oneTbb:
       break
     case .metaTbb:
@@ -1135,14 +1150,14 @@ func getConfig(for target: PkgTarget) -> TargetInfo
           name: "MetaTBB",
           targets: ["MetaTBB"]
         ),
-        .library(
-          name: "TBBMalloc",
-          targets: ["TBBMalloc"]
-        ),
-        .library(
-          name: "TBBMallocProxy",
-          targets: ["TBBMallocProxy"]
-        ),
+        // .library(
+        //   name: "TBBMalloc",
+        //   targets: ["TBBMalloc"]
+        // ),
+        // .library(
+        //   name: "TBBMallocProxy",
+        //   targets: ["TBBMallocProxy"]
+        // ),
         .library(
           name: "MicrosoftSTL",
           targets: ["MicrosoftSTL"]
@@ -1313,7 +1328,9 @@ enum Arch
     case nixnodroid
     /// everything not android (all - android).
     case nodroid
-
+    /// everything not wasm (all - wasi).
+    case nowasm
+    
     var platform: [Platform]
     {
       switch self
@@ -1327,6 +1344,7 @@ enum Arch
         case .applewindowsdroid: [.macOS, .iOS, .visionOS, .tvOS, .watchOS, .windows, .android]
         case .nixnodroid: [.macOS, .iOS, .visionOS, .tvOS, .watchOS, .linux, .openbsd]
         case .nodroid: [.macOS, .iOS, .visionOS, .tvOS, .watchOS, .linux, .openbsd, .windows]
+        case .nowasm: [.macOS, .iOS, .visionOS, .tvOS, .watchOS, .linux, .android, .openbsd, .windows]
       }
     }
 
@@ -1413,7 +1431,13 @@ enum Arch
     static func ocioDeps() -> [Target.Dependency]
     {
       // only add sse2neon on arm arch.
-      let sse2neon: [Target.Dependency] = Arch.cpuArch.family.contains(.arm) ? [.target(name: "sse2neon")] : []
+      let sse2neon: [Target.Dependency] = Arch.cpuArch.family.contains(.arm)
+        ? [
+          .target(
+            name: "sse2neon",
+            condition: .when(platforms: Arch.OS.nowasm.platform)
+          )
+        ] : []
 
       #if os(Linux) || os(OpenBSD) || os(FreeBSD)
         return [
@@ -1564,8 +1588,8 @@ enum Arch
 enum PkgTarget: String
 {
   case draco = "Draco"
-  case tbbMallocProxy = "TBBMallocProxy"
-  case tbbMalloc = "TBBMalloc"
+  // case tbbMallocProxy = "TBBMallocProxy"
+  // case tbbMalloc = "TBBMalloc"
   case oneTbb = "OneTBB"
   case metaTbb = "MetaTBB"
   case zstd = "ZStandard"
