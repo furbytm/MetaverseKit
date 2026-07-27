@@ -169,8 +169,10 @@ KMP_PREFIX_UNDERSCORE(\proc):
 
 # if KMP_ARCH_X86
 #  if KMP_OS_DARWIN
-        .data
-        .comm .gomp_critical_user_,32
+// See the KMP_OS_DARWIN note near the end of this file for why .zerofill
+// is used here instead of .comm.
+        .globl .gomp_critical_user_
+        .zerofill __DATA,__common,.gomp_critical_user_,32,3
         .data
         .globl ___kmp_unnamed_critical_addr
 ___kmp_unnamed_critical_addr:
@@ -190,8 +192,10 @@ __kmp_unnamed_critical_addr:
 
 # if KMP_ARCH_X86_64
 #  if KMP_OS_DARWIN
-        .data
-        .comm .gomp_critical_user_,32
+// See the KMP_OS_DARWIN note near the end of this file for why .zerofill
+// is used here instead of .comm.
+        .globl .gomp_critical_user_
+        .zerofill __DATA,__common,.gomp_critical_user_,32,3
         .data
         .globl ___kmp_unnamed_critical_addr
 ___kmp_unnamed_critical_addr:
@@ -1899,7 +1903,16 @@ __kmp_unnamed_critical_addr:
 # define KMP_PREFIX_UNDERSCORE(x) x
 #endif
     .data
+#if KMP_OS_DARWIN
+// Apple's ld-prime linker asserts ("atom->isAbsoluteAtom()", Relocations.cpp)
+// when an object file mixes debug info with a placeholder (.comm) definition.
+// To fix this, we create a concrete, zero-filled variable here instead,
+// Uninitialized definitions in other files will still safely point to this one.
+    .globl .gomp_critical_user_
+    .zerofill __DATA,__common,.gomp_critical_user_,32,3
+#else
     .comm .gomp_critical_user_,32,8
+#endif
     .data
     .align 8
     .global KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr)
