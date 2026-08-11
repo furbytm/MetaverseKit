@@ -5,7 +5,7 @@
 </h1>
 
 <p align="center">
-  <i align="center">Monolithic dependency encapsulating many <a href="https://landscape.aswf.io"><b>ASWF</b></a> projects to <b>swiftly</b> architect the <b>metaverse</b>.</i>
+  <i align="center">Monolithic dependency encapsulating many <a href="https://landscape.aswf.io"><b>ASWF</b></a> projects to <b>swiftly</b> architect our <b>digital world</b>.</i>
 </p>
 
 <h4 align="center">
@@ -22,13 +22,12 @@
 
 <image src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExb2pxN2Q4Y29kdmtuaGp5b3JwMDRhdmtmcHJ0c3VzZXhrc25hdnV1ZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/f9m9SX5FUGIUImpaSa/giphy.gif">
 
-### Embark on the Metaversal Frontier 
+### Get Swifty.
 
-Swiftly integrate the [**ASWF Landscape**](https://landscape.aswf.io) into mighty apps, plugins, and games with seamless simplicity. 
-**MetaverseKit** is a monolithic dependency target of the [**SwiftUSD**](https://github.com/wabiverse/SwiftUSD) package, and will
-continue to evolve with additional plugins, tools, and developer resources overtime. Once industry leaders adopt official support
-of these libraries as Swift Packages, the **MetaverseKit** package will begin to pull in these official git remotes through versioned
-releases, and we will provide monolithic releases in accordance with the [**VFX Reference Platform**](https://vfxplatform.com).
+Swiftly integrate the [**ASWF Landscape**](https://landscape.aswf.io) into apps, plugins, and games with simplicity. 
+**MetaverseKit** is a **CMake-less** monolithic dependency package for [**SwiftPM**](https://docs.swift.org/swiftpm/documentation/packagemanagerdocs) projects, and will continue to evolve with additional plugins, libraries, and resources overtime.
+
+<samp><b>todo</b>: [**VFX Reference Platform**](https://vfxplatform.com).</samp>
 
 <br/>
 
@@ -38,55 +37,132 @@ releases, and we will provide monolithic releases in accordance with the [**VFX 
 ##### To use MetaverseKit with Swift, add **MetaverseKit** as a **Package** dependency in your Package.swift file.
 ```swift
 dependencies: [
-  .package(url: "https://github.com/wabiverse/MetaverseKit.git", from: "1.8.5"),
+  .package(url: "https://github.com/wabiverse/MetaverseKit.git", from: "2.0.8"),
 ]
 ```
 
-<hr/>
-
-### Swift Targets
-
-| Swift Target                                                               | Version           |
-| -------------------------------------------------------------------------- | ----------------- |
-| OneTBB ([in progress](https://github.com/oneapi-src/oneTBB/issues/1244))   | 2021.10.0         |
-| Python                                                                     | 3.11.6            |
-| PyBind11                                                                   | 2.11.1            |
-| Boost                                                                      | 1.81.2            |
-| OpenSubdiv                                                                 | 3.6.0             |
-| OpenImageIO                                                                | master [a2f044a](https://github.com/AcademySoftwareFoundation/OpenImageIO/commit/a2f044a34c70b361d4927728b67714517cfd59ed)           |
-| OpenColorIO                                                                | 2.3.0             |
-| OpenTimelineIO                                                             | 0.17.0            |
-| OSL                                                                        | 1.12.14.0 (TODO)  |
-| Ptex                                                                       | 2.4.2             |
-| ImGui                                                                      | 1.89.9            |
-| Embree                                                                     | ??? (TODO)        |
-| Alembic                                                                    | 1.8.5             |
-| OpenEXR                                                                    | 3.2.1             |
-| IMath                                                                      | 3.1.9             |
-| MaterialX                                                                  | 1.38.8            |
-| OpenVDB                                                                    | 10.1.0            |
-| HDF5                                                                       | 1.10.0            |
-| Blosc                                                                      | 1.21.5            |
-| Eigen                                                                      | 3.4.0             |
-| Draco                                                                      | 1.5.6             |
-| TurboJPEG                                                                  | 3.0.1             |
-| TIFF                                                                       | 4.6.0             |
-| LibPNG                                                                     | 1.6.40            |
-| WebP                                                                       | 1.3.2             |
-| RAW                                                                        | 0.21.1            |
-| ZStandard                                                                  | 1.5.5             |
-| LZMA2                                                                      | 5.4.4             |
-| MiniZip                                                                    | 4.0.1             |
-| Yaml                                                                       | 0.8.0             |
-
-### Platform Independent
-| Swift Target                                                                                                                                           | Version                              |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------ |
-| Apple ([Metal-cpp]([https://github.com/oneapi-src/oneTBB/issues/1244](https://developer.apple.com/metal/cpp/files/metal-cpp_macOS14.2_iOS17.2.zip)))   | macOS 14.2 / iOS 17.2 / visionOS 1.0 |
-
 > [!NOTE]
 > Swift is an open source programming language that is fully
-> supported across **Linux** and [**Swift on Server**](https://www.swift.org/server/),
+> supported across **Linux**,
+> [**Android**](https://www.swift.org/documentation/articles/swift-sdk-for-android-getting-started.html),
 > the entire **Apple** family of devices: **macOS**, **visionOS**, **iOS**, **tvOS**, **watchOS**,
 > as well as support for **Microsoft Windows**. To learn more about Swift, please visit [swift.org](https://www.swift.org).
-<br>
+
+# License
+All files as noted are copyright (c) their original copyright authors, and released under their own respective Licenses.
+
+**FreeType**
+https://freetype.org
+License: FreeType License (BSD-style)
+
+**oneTBB**
+https://github.com/oneapi-src/oneTBB
+License: Apache 2.0
+
+**Eigen**
+https://github.com/libigl/eigen
+License: BSD 3-Clause
+
+**Draco**
+https://github.com/google/draco
+License: Apache 2.0
+
+**ZStandard**
+https://github.com/facebook/zstd
+License: BSD 3-Clause
+
+**ZLib**
+https://www.zlib.net
+License: zlib
+
+**Yaml**
+https://github.com/yaml/libyaml
+License: MIT
+
+**WebP**
+https://github.com/webmproject/libwebp
+License: BSD 3-Clause
+
+**LZMA2**
+https://github.com/conor42/fast-lzma2
+License: BSD 3-Clause
+
+**MiniZip**
+https://github.com/zlib-ng/minizip-ng
+License: zlib
+
+**Blosc**
+https://github.com/Blosc/c-blosc
+License: BSD 3-Clause
+
+**OpenVDB**
+https://github.com/AcademySoftwareFoundation/openvdb
+License: Apache 2.0
+
+**OpenColorIO**
+https://github.com/AcademySoftwareFoundation/OpenColorIO
+License: BSD 3-Clause
+
+**OpenImageIO**
+https://github.com/AcademySoftwareFoundation/OpenImageIO
+License: BSD 3-Clause
+
+**MaterialX**
+https://github.com/materialx/MaterialX
+License: Apache 2.0
+
+**LibPNG**
+http://www.libpng.org/pub/png
+License: LibPNG
+
+**Boost**
+https://github.com/boostorg/boost
+License: Boost Software License
+
+**Python**
+https://python.org
+License: Python Software Foundation License
+
+**OpenSubdiv**
+https://github.com/PixarAnimationStudios/OpenSubdiv
+License: Apache 2.0
+
+**OSL (Open Shading Language)**
+https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+License: BSD 3-Clause
+
+**Ptex**
+https://github.com/wdas/ptex
+License: Apache 2.0
+
+**ImGUI**
+https://github.com/ocornut/imgui
+License: MIT
+
+**Embree**
+https://github.com/RenderKit/embree
+License: Apache 2.0
+
+**Alembic**
+https://github.com/alembic/alembic
+License: BSD 3-Clause
+
+**OpenEXR**
+https://github.com/AcademySoftwareFoundation/openexr
+License: BSD 3-Clause
+
+**Imath**
+https://github.com/AcademySoftwareFoundation/Imath
+License: BSD 3-Clause
+
+**HDF5**
+https://github.com/HDFGroup/hdf5
+License: HDF5 License
+
+**TurboJPEG**
+https://github.com/libjpeg-turbo/libjpeg-turbo
+License: MIT
+
+**TIFF**
+https://github.com/libsdl-org/libtiff
+License: Apache 2.0
