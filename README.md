@@ -5,7 +5,7 @@
 </h1>
 
 <p align="center">
-  <i align="center">Monolithic dependency encapsulating many <a href="https://landscape.aswf.io"><b>ASWF</b></a> projects to <b>swiftly</b> architect our <b>digital world</b>.</i>
+  <i align="center">Monolithic dependency encapsulating many <a href="https://landscape.aswf.io"><b>ASWF</b></a> projects to <b>swiftly</b> architect our <b>digital reality</b>.</i>
 </p>
 
 <h4 align="center">
